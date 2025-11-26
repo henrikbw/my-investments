@@ -36,6 +36,17 @@ export function GrowthChart({ data }: GrowthChartProps) {
     { key: 'crypto', label: MODULE_LABELS.crypto, color: MODULE_COLORS.crypto, hasData: hasCrypto },
   ]
 
+  // Calculate appropriate interval for X-axis labels
+  const dataLength = data.length
+  let xAxisInterval = 0
+  if (dataLength > 20) {
+    xAxisInterval = Math.floor(dataLength / 10)
+  } else if (dataLength > 10) {
+    xAxisInterval = Math.floor(dataLength / 8)
+  } else if (dataLength > 5) {
+    xAxisInterval = 1
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -49,12 +60,12 @@ export function GrowthChart({ data }: GrowthChartProps) {
               dataKey="label"
               className="text-xs"
               tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              interval="preserveStartEnd"
+              interval={xAxisInterval}
             />
             <YAxis
               className="text-xs"
               tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+              tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
             />
             <Tooltip
               contentStyle={{
