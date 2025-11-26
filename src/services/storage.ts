@@ -3,44 +3,86 @@
  */
 
 import { Investment } from '@/types'
-
-const STORAGE_KEY = 'my-investments-data'
+import { STORAGE_KEY } from '@/constants/defaults'
 
 export const storageService = {
+  /**
+   * Get all investments from localStorage
+   */
   getInvestments(): Investment[] {
-    const data = localStorage.getItem(STORAGE_KEY)
-    if (!data) return []
+    try {
+      const data = localStorage.getItem(STORAGE_KEY)
+      if (!data) return []
 
-    const investments = JSON.parse(data)
-    // Convert date strings back to Date objects
-    return investments.map((inv: Investment) => ({
-      ...inv,
-      purchaseDate: new Date(inv.purchaseDate)
-    }))
-  },
-
-  saveInvestments(investments: Investment[]): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(investments))
-  },
-
-  addInvestment(investment: Investment): void {
-    const investments = this.getInvestments()
-    investments.push(investment)
-    this.saveInvestments(investments)
-  },
-
-  updateInvestment(id: string, updates: Partial<Investment>): void {
-    const investments = this.getInvestments()
-    const index = investments.findIndex(inv => inv.id === id)
-    if (index !== -1) {
-      investments[index] = { ...investments[index], ...updates }
-      this.saveInvestments(investments)
+      const investments = JSON.parse(data)
+      return investments as Investment[]
+    } catch (error) {
+      console.error('Error loading investments from storage:', error)
+      return []
     }
   },
 
-  deleteInvestment(id: string): void {
+  /**
+   * Save all investments to localStorage
+   */
+  saveInvestments(investments: Investment[]): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(investments))
+    } catch (error) {
+      console.error('Error saving investments to storage:', error)
+    }
+  },
+
+  /**
+   * Add a new investment
+   */
+  addInvestment(investment: Investment): Investment[] {
     const investments = this.getInvestments()
-    const filtered = investments.filter(inv => inv.id !== id)
+    const now = new Date().toISOString()
+    const newInvestment = {
+      ...investment,
+      createdAt: now,
+      updatedAt: now,
+    }
+    investments.push(newInvestment)
+    this.saveInvestments(investments)
+    return investments
+  },
+
+  /**
+   * Update an existing investment
+   */
+  updateInvestment(id: string, updates: Partial<Investment>): Investment[] {
+    const investments = this.getInvestments()
+    const index = investments.findIndex((inv) => inv.id === id)
+
+    if (index !== -1) {
+      investments[index] = {
+        ...investments[index],
+        ...updates,
+        id, // Ensure ID doesn't change
+        updatedAt: new Date().toISOString(),
+      } as Investment
+      this.saveInvestments(investments)
+    }
+
+    return investments
+  },
+
+  /**
+   * Delete an investment
+   */
+  deleteInvestment(id: string): Investment[] {
+    const investments = this.getInvestments()
+    const filtered = investments.filter((inv) => inv.id !== id)
     this.saveInvestments(filtered)
-  }
+    return filtered
+  },
+
+  /**
+   * Clear all investments (useful for testing)
+   */
+  clearAll(): void {
+    localStorage.removeItem(STORAGE_KEY)
+  },
 }

@@ -1,13 +1,31 @@
+/**
+ * Main App component with routing
+ */
+
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { PortfolioProvider } from '@/context/PortfolioContext'
+import { Layout } from '@/components/layout/Layout'
+import { Dashboard } from '@/pages/Dashboard'
+import { StocksPage } from '@/pages/StocksPage'
+import { FundsPage } from '@/pages/FundsPage'
+import { RealEstatePage } from '@/pages/RealEstatePage'
+import { CryptoPage } from '@/pages/CryptoPage'
+
 function App() {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-8">
-        <h1 className="text-4xl font-bold mb-8">My Investments</h1>
-        <p className="text-muted-foreground">
-          Track your investments and get future value prognosis
-        </p>
-      </div>
-    </div>
+    <BrowserRouter>
+      <PortfolioProvider>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/stocks" element={<StocksPage />} />
+            <Route path="/funds" element={<FundsPage />} />
+            <Route path="/real-estate" element={<RealEstatePage />} />
+            <Route path="/crypto" element={<CryptoPage />} />
+          </Routes>
+        </Layout>
+      </PortfolioProvider>
+    </BrowserRouter>
   )
 }
 
