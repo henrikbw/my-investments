@@ -6,22 +6,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { AllocationChartData } from '@/services/projections'
 import { MODULE_LABELS } from '@/constants/defaults'
+import { formatCurrency } from '@/utils/format'
 
 interface AllocationChartProps {
   data: AllocationChartData[]
+  year?: number
 }
 
-export function AllocationChart({ data }: AllocationChartProps) {
+export function AllocationChart({ data, year }: AllocationChartProps) {
   // Transform data to include all fields as indexable properties
   const chartData = data.map((item) => ({
     ...item,
     [item.name]: item.value,
   }))
 
+  const currentYear = new Date().getFullYear()
+  const displayYear = year ? currentYear + year : currentYear
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Asset Allocation</CardTitle>
+        <CardTitle>Asset Allocation ({displayYear})</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
@@ -46,7 +51,7 @@ export function AllocationChart({ data }: AllocationChartProps) {
                 borderRadius: '8px',
               }}
               formatter={(value: number, name: string) => [
-                `$${value.toLocaleString()}`,
+                formatCurrency(value),
                 MODULE_LABELS[name as keyof typeof MODULE_LABELS],
               ]}
             />

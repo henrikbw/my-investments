@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MODULE_COLORS, MODULE_LABELS } from '@/constants/defaults'
+import { formatCurrency, formatPercentage } from '@/utils/format'
 
 interface InvestmentCardProps {
   investment: Investment
@@ -40,26 +41,26 @@ export function InvestmentCard({ investment, onEdit, onDelete }: InvestmentCardP
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Current Value:</span>
-            <span className="font-medium">${investment.currentValue.toLocaleString()}</span>
+            <span className="font-medium">{formatCurrency(investment.currentValue)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Invested:</span>
-            <span>${investment.amountInvested.toLocaleString()}</span>
+            <span>{formatCurrency(investment.amountInvested)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Gain/Loss:</span>
             <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
-              {isPositive ? '+' : ''}${gain.toFixed(2)} ({gainPercentage.toFixed(2)}%)
+              {isPositive ? '+' : ''}{formatCurrency(gain)} ({formatPercentage(gainPercentage)})
             </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Expected ROI:</span>
-            <span>{investment.expectedAnnualROI}% / year</span>
+            <span>{formatPercentage(investment.expectedAnnualROI)} / year</span>
           </div>
           {investment.type === 'fund' && investment.monthlyContribution > 0 && (
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Monthly Contribution:</span>
-              <span>${investment.monthlyContribution.toLocaleString()}</span>
+              <span>{formatCurrency(investment.monthlyContribution)}</span>
             </div>
           )}
         </div>

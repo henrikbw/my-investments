@@ -134,6 +134,7 @@ export function calculateAllocation(
  */
 export interface GrowthChartData {
   year: number
+  actualYear: number
   value: number
   label: string
 }
@@ -142,12 +143,14 @@ export function prepareGrowthChartData(
   investments: Investment[]
 ): GrowthChartData[] {
   const currentValue = calculateTotalValue(investments)
+  const currentYear = new Date().getFullYear()
 
   const data: GrowthChartData[] = [
     {
       year: 0,
+      actualYear: currentYear,
       value: Math.round(currentValue * 100) / 100,
-      label: 'Now',
+      label: currentYear.toString(),
     },
   ]
 
@@ -155,12 +158,63 @@ export function prepareGrowthChartData(
   projections.forEach((proj) => {
     data.push({
       year: proj.year,
+      actualYear: currentYear + proj.year,
       value: proj.value,
-      label: `${proj.year}Y`,
+      label: (currentYear + proj.year).toString(),
     })
   })
 
   return data
+}
+
+/**
+ * Calculate allocation for a specific year in the future
+ */
+export function calculateAllocationForYear(
+  investments: Investment[],
+  years: number
+): AllocationData[] {
+  // Project all investments to the target year
+  const projectedInvestments = investments.map((inv) => {
+    const futureValue = calculateFutureValue(inv, years)
+    return {
+      type: inv.type,
+      value: futureValue,
+    }
+  })
+
+  // Group by type
+  const typeGroups = projectedInvestments.reduce((acc, inv) => {
+    if (!acc[inv.type]) {
+      acc[inv.type] = { value: 0, count: 0 }
+    }
+    acc[inv.type].value += inv.value
+    acc[inv.type].count += 1
+    return acc
+  }, {} as Record<InvestmentType, { value: number; count: number }>)
+
+  // Calculate total value
+  const totalValue = Object.values(typeGroups).reduce(
+    (sum, group) => sum + group.value,
+    0
+  )
+
+  // Calculate allocation for each type
+  const allocation: AllocationData[] = Object.entries(typeGroups).map(
+    ([type, data]) => {
+      const percentage = totalValue === 0 ? 0 : (data.value / totalValue) * 100
+
+      return {
+        type: type as InvestmentType,
+        value: Math.round(data.value * 100) / 100,
+        percentage: Math.round(percentage * 100) / 100,
+        count: data.count,
+      }
+    }
+  )
+
+  // Sort by value descending
+  return allocation.sort((a, b) => b.value - a.value)
 }
 
 /**
@@ -174,9 +228,12 @@ export interface AllocationChartData {
 }
 
 export function prepareAllocationChartData(
-  investments: Investment[]
+  investments: Investment[],
+  years: number = 0
 ): AllocationChartData[] {
-  const allocation = calculateAllocation(investments)
+  const allocation = years === 0
+    ? calculateAllocation(investments)
+    : calculateAllocationForYear(investments, years)
 
   return allocation.map((item) => ({
     name: item.type,

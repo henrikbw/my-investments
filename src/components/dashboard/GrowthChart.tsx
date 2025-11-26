@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { GrowthChartData } from '@/services/projections'
+import { formatCurrency } from '@/utils/format'
 
 interface GrowthChartProps {
   data: GrowthChartData[]
@@ -36,7 +37,7 @@ export function GrowthChart({ data }: GrowthChartProps) {
             <YAxis
               className="text-xs"
               tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+              tickFormatter={(value) => `${(value / 1000).toFixed(0)}k kr`}
             />
             <Tooltip
               contentStyle={{
@@ -44,7 +45,7 @@ export function GrowthChart({ data }: GrowthChartProps) {
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '8px',
               }}
-              formatter={(value: number) => [`$${value.toLocaleString()}`, 'Value']}
+              formatter={(value: number) => [formatCurrency(value), 'Value']}
             />
             <Line
               type="monotone"

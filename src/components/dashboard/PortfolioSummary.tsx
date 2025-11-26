@@ -4,26 +4,28 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PortfolioSummary as PortfolioSummaryType, Projection } from '@/types'
+import { formatCurrency, formatPercentage } from '@/utils/format'
 
 interface PortfolioSummaryProps {
   summary: PortfolioSummaryType
-  projections: Projection[]
+  selectedProjection: Projection | null
 }
 
-export function PortfolioSummary({ summary, projections }: PortfolioSummaryProps) {
+export function PortfolioSummary({ summary, selectedProjection }: PortfolioSummaryProps) {
   const isPositive = summary.totalGain >= 0
+  const currentYear = new Date().getFullYear()
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Total Value
+            Current Value ({currentYear})
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            ${summary.totalValue.toLocaleString()}
+            {formatCurrency(summary.totalValue)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {summary.investmentCount} investment{summary.investmentCount !== 1 ? 's' : ''}
@@ -39,31 +41,31 @@ export function PortfolioSummary({ summary, projections }: PortfolioSummaryProps
         </CardHeader>
         <CardContent>
           <div className={`text-2xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-            {isPositive ? '+' : ''}${summary.totalGain.toLocaleString()}
+            {isPositive ? '+' : ''}{formatCurrency(summary.totalGain)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {isPositive ? '+' : ''}{summary.percentageGain.toFixed(2)}% return
+            {isPositive ? '+' : ''}{formatPercentage(summary.percentageGain)} return
           </p>
         </CardContent>
       </Card>
 
-      {projections.map((projection) => (
-        <Card key={projection.year}>
+      {selectedProjection && (
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {projection.year} Year Projection
+              Projected Value ({currentYear + selectedProjection.year})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${projection.value.toLocaleString()}
+              {formatCurrency(selectedProjection.value)}
             </div>
             <p className="text-xs text-green-600 mt-1">
-              +${projection.totalGain.toLocaleString()} ({projection.percentageGain.toFixed(1)}%)
+              +{formatCurrency(selectedProjection.totalGain)} ({formatPercentage(selectedProjection.percentageGain, 1)})
             </p>
           </CardContent>
         </Card>
-      ))}
+      )}
     </div>
   )
 }

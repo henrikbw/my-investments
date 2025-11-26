@@ -2,22 +2,26 @@
  * Dashboard page
  */
 
+import { useState } from 'react'
 import { usePortfolio } from '@/hooks/usePortfolio'
 import { PortfolioSummary } from '@/components/dashboard/PortfolioSummary'
 import { GrowthChart } from '@/components/dashboard/GrowthChart'
 import { AllocationChart } from '@/components/dashboard/AllocationChart'
 import { ModuleCards } from '@/components/dashboard/ModuleCards'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { Button } from '@/components/ui/button'
 import {
   calculatePortfolioSummary,
   generatePortfolioProjections,
   prepareGrowthChartData,
   prepareAllocationChartData,
 } from '@/services/projections'
+import { PROJECTION_YEARS } from '@/constants/defaults'
 
 export function Dashboard() {
   const { state } = usePortfolio()
   const { investments, loading } = state
+  const [selectedYear, setSelectedYear] = useState<number>(5)
 
   if (loading) {
     return (
@@ -45,8 +49,9 @@ export function Dashboard() {
 
   const summary = calculatePortfolioSummary(investments)
   const projections = generatePortfolioProjections(investments)
+  const selectedProjection = projections.find((p) => p.year === selectedYear) || null
   const growthData = prepareGrowthChartData(investments)
-  const allocationData = prepareAllocationChartData(investments)
+  const allocationData = prepareAllocationChartData(investments, selectedYear)
 
   return (
     <div className="space-y-8">
@@ -57,11 +62,29 @@ export function Dashboard() {
         </p>
       </div>
 
-      <PortfolioSummary summary={summary} projections={projections} />
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Projection Year:</span>
+          <div className="flex gap-2">
+            {PROJECTION_YEARS.map((year) => (
+              <Button
+                key={year}
+                variant={selectedYear === year ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedYear(year)}
+              >
+                {year} Year{year > 1 ? 's' : ''}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <PortfolioSummary summary={summary} selectedProjection={selectedProjection} />
+      </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <GrowthChart data={growthData} />
-        <AllocationChart data={allocationData} />
+        <AllocationChart data={allocationData} year={selectedYear} />
       </div>
 
       <div>

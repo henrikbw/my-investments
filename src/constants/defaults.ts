@@ -27,4 +27,4 @@ export const MODULE_LABELS: Record<InvestmentType, string> = {
 
 export const STORAGE_KEY = 'my-investments-portfolio'
 
-export const PROJECTION_YEARS = [1, 5, 10] as const
+export const PROJECTION_YEARS = [1, 5, 10, 20] as const

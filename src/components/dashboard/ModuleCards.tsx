@@ -9,6 +9,7 @@ import { InvestmentType } from '@/types'
 import { MODULE_COLORS, MODULE_LABELS } from '@/constants/defaults'
 import { usePortfolio } from '@/hooks/usePortfolio'
 import { calculateTotalValue } from '@/services/calculations'
+import { formatCurrency } from '@/utils/format'
 
 const modules: Array<{ type: InvestmentType; path: string }> = [
   { type: 'stock', path: '/stocks' },
@@ -53,7 +54,7 @@ export function ModuleCards() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Total Value:</span>
                   <span className="font-medium">
-                    ${totalValue.toLocaleString()}
+                    {formatCurrency(totalValue)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
