@@ -50,7 +50,7 @@ export function Dashboard() {
   const summary = calculatePortfolioSummary(investments)
   const projections = generatePortfolioProjections(investments)
   const selectedProjection = projections.find((p) => p.year === selectedYear) || null
-  const growthData = prepareGrowthChartData(investments)
+  const growthData = prepareGrowthChartData(investments, selectedYear)
   const allocationData = prepareAllocationChartData(investments, selectedYear)
 
   return (

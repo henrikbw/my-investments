@@ -130,39 +130,55 @@ export function calculateAllocation(
 }
 
 /**
- * Prepare data for growth chart
+ * Prepare data for growth chart with breakdown by asset type
  */
 export interface GrowthChartData {
   year: number
   actualYear: number
-  value: number
   label: string
+  total: number
+  stock: number
+  fund: number
+  'real-estate': number
+  crypto: number
 }
 
 export function prepareGrowthChartData(
-  investments: Investment[]
+  investments: Investment[],
+  maxYears: number = 20
 ): GrowthChartData[] {
-  const currentValue = calculateTotalValue(investments)
   const currentYear = new Date().getFullYear()
+  const data: GrowthChartData[] = []
 
-  const data: GrowthChartData[] = [
-    {
-      year: 0,
-      actualYear: currentYear,
-      value: Math.round(currentValue * 100) / 100,
-      label: currentYear.toString(),
-    },
-  ]
+  // Generate data for each year from 0 to maxYears
+  for (let year = 0; year <= maxYears; year++) {
+    const yearData: GrowthChartData = {
+      year,
+      actualYear: currentYear + year,
+      label: (currentYear + year).toString(),
+      total: 0,
+      stock: 0,
+      fund: 0,
+      'real-estate': 0,
+      crypto: 0,
+    }
 
-  const projections = generatePortfolioProjections(investments)
-  projections.forEach((proj) => {
-    data.push({
-      year: proj.year,
-      actualYear: currentYear + proj.year,
-      value: proj.value,
-      label: (currentYear + proj.year).toString(),
+    // Calculate projected value for each investment and group by type
+    investments.forEach((inv) => {
+      const projectedValue = calculateFutureValue(inv, year)
+      yearData.total += projectedValue
+      yearData[inv.type] += projectedValue
     })
-  })
+
+    // Round values
+    yearData.total = Math.round(yearData.total * 100) / 100
+    yearData.stock = Math.round(yearData.stock * 100) / 100
+    yearData.fund = Math.round(yearData.fund * 100) / 100
+    yearData['real-estate'] = Math.round(yearData['real-estate'] * 100) / 100
+    yearData.crypto = Math.round(yearData.crypto * 100) / 100
+
+    data.push(yearData)
+  }
 
   return data
 }
