@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import {
   calculatePortfolioSummary,
   generatePortfolioProjections,
+  generatePortfolioProjectionsWithBreakdown,
   prepareGrowthChartData,
   prepareAllocationChartData,
 } from '@/services/projections'
@@ -48,7 +49,7 @@ export function Dashboard() {
   }
 
   const summary = calculatePortfolioSummary(investments)
-  const projections = generatePortfolioProjections(investments)
+  const projections = generatePortfolioProjectionsWithBreakdown(investments)
   const selectedProjection = projections.find((p) => p.year === selectedYear) || null
   const growthData = prepareGrowthChartData(investments, selectedYear)
   const allocationData = prepareAllocationChartData(investments, selectedYear)

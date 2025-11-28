@@ -11,9 +11,20 @@ export interface Projection {
   percentageGain: number
 }
 
+export interface ProjectionBreakdown {
+  principal: number
+  contributions: number
+  growth: number
+  total: number
+}
+
 export interface InvestmentProjection {
   investmentId: string
   projections: Projection[]
+}
+
+export interface ProjectionWithBreakdown extends Projection {
+  breakdown: ProjectionBreakdown
 }
 
 export interface PortfolioSummary {

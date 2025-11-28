@@ -7,6 +7,8 @@ import {
   Investment,
   InvestmentProjection,
   Projection,
+  ProjectionBreakdown,
+  ProjectionWithBreakdown,
   PortfolioSummary,
   AllocationData,
   InvestmentType,
@@ -69,6 +71,64 @@ export function generatePortfolioProjections(
       value: Math.round(futureValue * 100) / 100,
       totalGain: Math.round(totalGain * 100) / 100,
       percentageGain: Math.round(percentageGain * 100) / 100,
+    }
+  })
+}
+
+/**
+ * Calculate projection breakdown for a specific year
+ */
+export function calculateProjectionBreakdown(
+  investments: Investment[],
+  years: number
+): ProjectionBreakdown {
+  // Calculate the total principal (current value of all investments)
+  const principal = calculateTotalValue(investments)
+
+  // Calculate total contributions over the projection period
+  const contributions = investments.reduce((sum, inv) => {
+    if (inv.type === 'fund' && inv.monthlyContribution > 0) {
+      return sum + (inv.monthlyContribution * 12 * years)
+    }
+    return sum
+  }, 0)
+
+  // Calculate the total future value
+  const futureValue = investments.reduce(
+    (sum, inv) => sum + calculateFutureValue(inv, years),
+    0
+  )
+
+  // Growth is what's left after principal and contributions
+  const growth = futureValue - principal - contributions
+
+  return {
+    principal: Math.round(principal * 100) / 100,
+    contributions: Math.round(contributions * 100) / 100,
+    growth: Math.round(growth * 100) / 100,
+    total: Math.round(futureValue * 100) / 100,
+  }
+}
+
+/**
+ * Generate portfolio projections with breakdown
+ */
+export function generatePortfolioProjectionsWithBreakdown(
+  investments: Investment[]
+): ProjectionWithBreakdown[] {
+  return PROJECTION_YEARS.map((year) => {
+    const breakdown = calculateProjectionBreakdown(investments, year)
+    const currentValue = calculateTotalValue(investments)
+    const totalGain = breakdown.total - currentValue
+    const percentageGain =
+      currentValue === 0 ? 0 : (totalGain / currentValue) * 100
+
+    return {
+      year,
+      value: breakdown.total,
+      totalGain: Math.round(totalGain * 100) / 100,
+      percentageGain: Math.round(percentageGain * 100) / 100,
+      breakdown,
     }
   })
 }
