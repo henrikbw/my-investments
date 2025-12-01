@@ -75,10 +75,14 @@ export function useLoans() {
     })
   }, [loans, state.investments])
 
-  // Calculate total equity (assets - loans for linked assets)
+  // Calculate total equity (ALL assets - ALL loans)
   const totalEquity = useMemo(() => {
-    return equityData.reduce((sum, data) => sum + data.equity, 0)
-  }, [equityData])
+    const totalAssetValue = state.investments.reduce(
+      (sum, inv) => sum + inv.currentValue,
+      0
+    )
+    return totalAssetValue - totalLoanBalance
+  }, [state.investments, totalLoanBalance])
 
   // Get linkable assets (investments that can have loans linked to them)
   const linkableAssets = useMemo((): Investment[] => {

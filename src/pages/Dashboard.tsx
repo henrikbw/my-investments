@@ -10,6 +10,7 @@ import { AllocationChart } from '@/components/dashboard/AllocationChart'
 import { ModuleCards } from '@/components/dashboard/ModuleCards'
 import { IndividualProjections } from '@/components/dashboard/IndividualProjections'
 import { EquitySummary } from '@/components/dashboard/EquitySummary'
+import { EquityProjectionChart } from '@/components/dashboard/EquityProjectionChart'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,12 +19,13 @@ import {
   prepareGrowthChartData,
   prepareAllocationChartData,
   prepareIndividualProjections,
+  prepareEquityChartData,
 } from '@/services/projections'
 import { PROJECTION_YEARS } from '@/constants/defaults'
 
 export function Dashboard() {
   const { state } = usePortfolio()
-  const { investments, loading } = state
+  const { investments, loans, loading } = state
   const [selectedYear, setSelectedYear] = useState<number>(5)
 
   if (loading) {
@@ -56,6 +58,7 @@ export function Dashboard() {
   const growthData = prepareGrowthChartData(investments, selectedYear)
   const allocationData = prepareAllocationChartData(investments, selectedYear)
   const individualProjections = prepareIndividualProjections(investments, selectedYear)
+  const equityChartData = prepareEquityChartData(investments, loans, selectedYear)
 
   return (
     <div className="space-y-8">
@@ -93,7 +96,12 @@ export function Dashboard() {
 
       <IndividualProjections data={individualProjections} selectedYear={selectedYear} />
 
-      <EquitySummary selectedYear={selectedYear} investments={investments} />
+      <div className="space-y-6">
+        {equityChartData.length > 0 && (
+          <EquityProjectionChart data={equityChartData} />
+        )}
+        <EquitySummary selectedYear={selectedYear} investments={investments} />
+      </div>
 
       <div>
         <h3 className="text-xl font-semibold mb-4">Investment Modules</h3>

@@ -12,6 +12,7 @@ import {
   PortfolioSummary,
   AllocationData,
   InvestmentType,
+  Loan,
 } from '@/types'
 import {
   calculateFutureValue,
@@ -20,6 +21,7 @@ import {
   calculateTotalGain,
   calculatePercentageGain,
 } from './calculations'
+import { calculateBalanceAfterYears } from './loanCalculations'
 import { PROJECTION_YEARS, MODULE_COLORS } from '@/constants/defaults'
 
 /**
@@ -398,4 +400,63 @@ export function prepareIndividualProjections(
       chartData,
     }
   }).sort((a, b) => b.projectedValue - a.projectedValue)
+}
+
+/**
+ * Equity chart data for equity projection visualization
+ */
+export interface EquityChartData {
+  year: number
+  actualYear: number
+  label: string
+  assetValue: number
+  loanBalance: number
+  equity: number
+}
+
+/**
+ * Prepare equity projection chart data
+ * Shows total assets, total loans, and net equity over time
+ * Includes ALL investments (not just those with linked loans)
+ */
+export function prepareEquityChartData(
+  investments: Investment[],
+  loans: Loan[],
+  maxYears: number = 20
+): EquityChartData[] {
+  const currentYear = new Date().getFullYear()
+  const data: EquityChartData[] = []
+
+  // If no investments, return empty data
+  if (investments.length === 0) {
+    return []
+  }
+
+  // Generate data for each year
+  for (let year = 0; year <= maxYears; year++) {
+    // Calculate total asset value for ALL investments
+    const assetValue = investments.reduce(
+      (sum, asset) => sum + calculateFutureValue(asset, year),
+      0
+    )
+
+    // Calculate total loan balance for ALL loans
+    const loanBalance = loans.reduce(
+      (sum, loan) => sum + calculateBalanceAfterYears(loan, year),
+      0
+    )
+
+    const equity = assetValue - loanBalance
+
+    data.push({
+      year,
+      actualYear: currentYear + year,
+      label: (currentYear + year).toString(),
+      assetValue: Math.round(assetValue * 100) / 100,
+      loanBalance: Math.round(loanBalance * 100) / 100,
+      equity: Math.round(equity * 100) / 100,
+    })
+  }
+
+  return data
 }
