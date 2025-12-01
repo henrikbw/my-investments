@@ -9,11 +9,11 @@ import { GrowthChart } from '@/components/dashboard/GrowthChart'
 import { AllocationChart } from '@/components/dashboard/AllocationChart'
 import { ModuleCards } from '@/components/dashboard/ModuleCards'
 import { IndividualProjections } from '@/components/dashboard/IndividualProjections'
+import { EquitySummary } from '@/components/dashboard/EquitySummary'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
 import {
   calculatePortfolioSummary,
-  generatePortfolioProjections,
   generatePortfolioProjectionsWithBreakdown,
   prepareGrowthChartData,
   prepareAllocationChartData,
@@ -92,6 +92,8 @@ export function Dashboard() {
       </div>
 
       <IndividualProjections data={individualProjections} selectedYear={selectedYear} />
+
+      <EquitySummary selectedYear={selectedYear} investments={investments} />
 
       <div>
         <h3 className="text-xl font-semibold mb-4">Investment Modules</h3>

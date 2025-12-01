@@ -12,6 +12,7 @@ const navItems = [
   { path: '/funds', label: MODULE_LABELS.fund },
   { path: '/real-estate', label: MODULE_LABELS['real-estate'] },
   { path: '/crypto', label: MODULE_LABELS.crypto },
+  { path: '/loans', label: 'Loans' },
 ]
 
 export function Navigation() {
