@@ -18,7 +18,6 @@ interface PortfolioSummaryProps {
 }
 
 export function PortfolioSummary({ summary, selectedProjection, investments, loans }: PortfolioSummaryProps) {
-  const isPositive = summary.totalGain >= 0
   const selectedYear = selectedProjection?.year ?? 0
 
   // Calculate net worth values
@@ -62,20 +61,26 @@ export function PortfolioSummary({ summary, selectedProjection, investments, loa
         </CardContent>
       </Card>
 
-      {/* Card 2: Investment Gain/Loss */}
+      {/* Card 2: Projected Investment Gain */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Investment Gain/Loss
+            Projected Gain ({selectedYear}y)
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className={`text-2xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-            {isPositive ? '+' : ''}{formatCurrency(summary.totalGain)}
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {isPositive ? '+' : ''}{formatPercentage(summary.percentageGain)} return
-          </p>
+          {selectedProjection ? (
+            <>
+              <div className={`text-2xl font-bold ${selectedProjection.totalGain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {selectedProjection.totalGain >= 0 ? '+' : ''}{formatCurrency(selectedProjection.totalGain)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {selectedProjection.totalGain >= 0 ? '+' : ''}{formatPercentage(selectedProjection.percentageGain)} return
+              </p>
+            </>
+          ) : (
+            <div className="text-2xl font-bold text-muted-foreground">-</div>
+          )}
         </CardContent>
       </Card>
 
