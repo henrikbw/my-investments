@@ -4,3 +4,4 @@
 
 export * from './investments'
 export * from './portfolio'
+export * from './loans'

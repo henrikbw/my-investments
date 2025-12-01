@@ -3,6 +3,7 @@
  */
 
 import { Investment, InvestmentType } from './investments'
+import { Loan } from './loans'
 
 export interface Projection {
   year: number
@@ -44,6 +45,7 @@ export interface AllocationData {
 
 export interface PortfolioState {
   investments: Investment[]
+  loans: Loan[]
   loading: boolean
   error: string | null
 }
@@ -53,5 +55,9 @@ export type PortfolioAction =
   | { type: 'ADD_INVESTMENT'; payload: Investment }
   | { type: 'UPDATE_INVESTMENT'; payload: { id: string; updates: Partial<Investment> } }
   | { type: 'DELETE_INVESTMENT'; payload: string }
+  | { type: 'SET_LOANS'; payload: Loan[] }
+  | { type: 'ADD_LOAN'; payload: Loan }
+  | { type: 'UPDATE_LOAN'; payload: { id: string; updates: Partial<Loan> } }
+  | { type: 'DELETE_LOAN'; payload: string }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }

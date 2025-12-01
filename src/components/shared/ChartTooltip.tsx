@@ -37,12 +37,13 @@ export function GrowthChartTooltip({
   const growthPercentage = startValue > 0 ? (growthFromStart / startValue) * 100 : 0
 
   // Get asset types that have data
-  const assetTypes: Array<{ key: InvestmentType; value: number }> = [
+  const allAssetTypes: Array<{ key: InvestmentType; value: number }> = [
     { key: 'stock', value: data.stock },
     { key: 'fund', value: data.fund },
     { key: 'real-estate', value: data['real-estate'] },
     { key: 'crypto', value: data.crypto },
-  ].filter((item) => item.value > 0)
+  ]
+  const assetTypes = allAssetTypes.filter((item) => item.value > 0)
 
   return (
     <div className="rounded-lg border border-border bg-card p-3 shadow-lg">

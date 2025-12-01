@@ -1,9 +1,9 @@
 /**
- * LocalStorage service for persisting investment data
+ * LocalStorage service for persisting investment and loan data
  */
 
-import { Investment } from '@/types'
-import { STORAGE_KEY } from '@/constants/defaults'
+import { Investment, Loan } from '@/types'
+import { STORAGE_KEY, LOANS_STORAGE_KEY } from '@/constants/defaults'
 
 export const storageService = {
   /**
@@ -80,9 +80,83 @@ export const storageService = {
   },
 
   /**
-   * Clear all investments (useful for testing)
+   * Get all loans from localStorage
+   */
+  getLoans(): Loan[] {
+    try {
+      const data = localStorage.getItem(LOANS_STORAGE_KEY)
+      if (!data) return []
+
+      const loans = JSON.parse(data)
+      return loans as Loan[]
+    } catch (error) {
+      console.error('Error loading loans from storage:', error)
+      return []
+    }
+  },
+
+  /**
+   * Save all loans to localStorage
+   */
+  saveLoans(loans: Loan[]): void {
+    try {
+      localStorage.setItem(LOANS_STORAGE_KEY, JSON.stringify(loans))
+    } catch (error) {
+      console.error('Error saving loans to storage:', error)
+    }
+  },
+
+  /**
+   * Add a new loan
+   */
+  addLoan(loan: Loan): Loan[] {
+    const loans = this.getLoans()
+    const now = new Date().toISOString()
+    const newLoan = {
+      ...loan,
+      createdAt: now,
+      updatedAt: now,
+    }
+    loans.push(newLoan)
+    this.saveLoans(loans)
+    return loans
+  },
+
+  /**
+   * Update an existing loan
+   */
+  updateLoan(id: string, updates: Partial<Loan>): Loan[] {
+    const loans = this.getLoans()
+    const index = loans.findIndex((loan) => loan.id === id)
+
+    if (index !== -1) {
+      loans[index] = {
+        ...loans[index],
+        ...updates,
+        id, // Ensure ID doesn't change
+        updatedAt: new Date().toISOString(),
+      } as Loan
+      this.saveLoans(loans)
+    }
+
+    return loans
+  },
+
+  /**
+   * Delete a loan
+   */
+  deleteLoan(id: string): Loan[] {
+    const loans = this.getLoans()
+    const filtered = loans.filter((loan) => loan.id !== id)
+    this.saveLoans(filtered)
+    return filtered
+  },
+
+  /**
+   * Clear all data (useful for testing)
    */
   clearAll(): void {
     localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(LOANS_STORAGE_KEY)
   },
 }
