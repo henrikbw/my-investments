@@ -86,7 +86,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <PortfolioSummary summary={summary} selectedProjection={selectedProjection} />
+        <PortfolioSummary summary={summary} selectedProjection={selectedProjection} investments={investments} loans={loans} />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
