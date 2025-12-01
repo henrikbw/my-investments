@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { AllocationChartData } from '@/services/projections'
 import { MODULE_LABELS } from '@/constants/defaults'
-import { formatCurrency } from '@/utils/format'
+import { AllocationChartTooltip } from '@/components/shared/ChartTooltip'
 
 interface AllocationChartProps {
   data: AllocationChartData[]
@@ -44,17 +44,7 @@ export function AllocationChart({ data, year }: AllocationChartProps) {
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
-              }}
-              formatter={(value: number, name: string) => [
-                formatCurrency(value),
-                MODULE_LABELS[name as keyof typeof MODULE_LABELS],
-              ]}
-            />
+            <Tooltip content={<AllocationChartTooltip />} />
             <Legend
               formatter={(value) => MODULE_LABELS[value as keyof typeof MODULE_LABELS]}
             />
