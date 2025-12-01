@@ -262,6 +262,88 @@ const DEFAULT_ROI = {
 
 ---
 
+## Sub-Agent Delegation Strategy
+
+**IMPORTANT**: Proactively delegate tasks to specialized sub-agents using the Task tool. This improves efficiency, reduces context usage, and leverages domain expertise.
+
+### When to Delegate
+
+| Task Type | Delegate To | Example |
+|-----------|-------------|---------|
+| React components, hooks, state | `react-specialist` | "Build the InvestmentCard component" |
+| Type definitions, interfaces | `typescript-pro` | "Define types for the new export feature" |
+| Financial calculations, projections | `data-analyst` | "Implement ROI calculation with dividends" |
+| Styling, UX, accessibility | `ui-designer` | "Design the empty state for crypto module" |
+| Codebase exploration | `Explore` | "Find all files that handle projections" |
+| Multi-step planning | `Plan` | "Plan the implementation of batch import" |
+
+### Delegation Patterns
+
+#### Parallel Delegation (Independent Tasks)
+When tasks are independent, launch multiple agents simultaneously:
+```
+User: "Add a new bond investment type with its own module"
+
+→ Launch in parallel:
+  - typescript-pro: "Define BondInvestment interface extending BaseInvestment"
+  - ui-designer: "Design the bond module card and form layout"
+  - data-analyst: "Implement bond yield calculations"
+
+→ Then sequentially:
+  - react-specialist: "Build bond module components using the types, designs, and calculations"
+```
+
+#### Sequential Delegation (Dependent Tasks)
+When tasks depend on each other, chain agents:
+```
+User: "Refactor the projection system to support custom time ranges"
+
+→ Step 1: typescript-pro defines new projection types
+→ Step 2: data-analyst updates calculation logic with new types
+→ Step 3: react-specialist builds UI controls for time range selection
+→ Step 4: ui-designer reviews and polishes the interface
+```
+
+#### Exploration Before Implementation
+Always explore before making significant changes:
+```
+User: "Optimize the chart rendering performance"
+
+→ First: Explore agent to understand current chart implementation
+→ Then: react-specialist to implement optimizations
+→ Finally: ui-designer to verify visual quality
+```
+
+### Agent Prompt Best Practices
+
+When delegating, provide agents with:
+1. **Clear objective**: What specific outcome is needed
+2. **Context**: Relevant files, types, or constraints
+3. **Boundaries**: What files/areas to modify (or not modify)
+4. **Output format**: What to return (code, analysis, recommendations)
+
+Example prompt for react-specialist:
+```
+"Build a DeleteConfirmModal component in src/components/shared/.
+
+Requirements:
+- Accept `isOpen`, `onClose`, `onConfirm`, `itemName` props
+- Use existing Dialog component from shadcn/ui
+- Include warning icon and confirm/cancel buttons
+- Follow existing component patterns in the shared folder
+
+Return the complete component code."
+```
+
+### Do NOT Delegate When
+
+- Task is trivial (single file edit, small fix)
+- You already have full context and solution is clear
+- Task requires back-and-forth user clarification
+- Reading a specific known file (use Read tool directly)
+
+---
+
 ## Agent Collaboration Guidelines
 
 ### Communication
