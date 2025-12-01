@@ -3,10 +3,10 @@
  */
 
 /**
- * Format number as Norwegian kroner
+ * Format number as Norwegian kroner (no decimals)
  */
 export function formatCurrency(amount: number): string {
-  return `${amount.toLocaleString()} kr`
+  return `${Math.round(amount).toLocaleString()} kr`
 }
 
 /**
