@@ -14,9 +14,8 @@ import {
   Legend,
 } from 'recharts'
 import { GrowthChartData } from '@/services/projections'
-import { formatCurrency } from '@/utils/format'
 import { MODULE_COLORS, MODULE_LABELS } from '@/constants/defaults'
-import { InvestmentType } from '@/types'
+import { GrowthChartTooltip } from '@/components/shared/ChartTooltip'
 
 interface GrowthChartProps {
   data: GrowthChartData[]
@@ -68,16 +67,8 @@ export function GrowthChart({ data }: GrowthChartProps) {
               tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
-              }}
-              formatter={(value: number, name: string) => {
-                if (name === 'total') return [formatCurrency(value), 'Total']
-                const assetType = assetTypes.find((a) => a.key === name)
-                return [formatCurrency(value), assetType?.label || name]
-              }}
+              content={<GrowthChartTooltip startValue={data[0]?.total ?? 0} />}
+              cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
             />
             <Legend
               formatter={(value) => {
