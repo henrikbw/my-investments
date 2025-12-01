@@ -345,3 +345,57 @@ export function prepareAllocationChartData(
     }
   })
 }
+
+/**
+ * Individual investment projection card data
+ */
+export interface IndividualProjectionData {
+  id: string
+  name: string
+  type: InvestmentType
+  currentValue: number
+  projectedValue: number
+  totalGain: number
+  percentageGain: number
+  roi: number
+  monthlyContribution?: number
+  chartData: Array<{ year: number; value: number }>
+}
+
+/**
+ * Prepare projection data for individual investments
+ */
+export function prepareIndividualProjections(
+  investments: Investment[],
+  maxYears: number = 20
+): IndividualProjectionData[] {
+  return investments.map((inv) => {
+    const projectedValue = calculateFutureValue(inv, maxYears)
+    const totalGain = projectedValue - inv.currentValue
+    const percentageGain =
+      inv.currentValue === 0 ? 0 : (totalGain / inv.currentValue) * 100
+
+    // Generate chart data points for mini chart
+    const chartData: Array<{ year: number; value: number }> = []
+    for (let year = 0; year <= maxYears; year++) {
+      chartData.push({
+        year,
+        value: Math.round(calculateFutureValue(inv, year) * 100) / 100,
+      })
+    }
+
+    return {
+      id: inv.id,
+      name: inv.name,
+      type: inv.type,
+      currentValue: inv.currentValue,
+      projectedValue: Math.round(projectedValue * 100) / 100,
+      totalGain: Math.round(totalGain * 100) / 100,
+      percentageGain: Math.round(percentageGain * 100) / 100,
+      roi: inv.expectedAnnualROI,
+      monthlyContribution:
+        inv.type === 'fund' ? inv.monthlyContribution : undefined,
+      chartData,
+    }
+  }).sort((a, b) => b.projectedValue - a.projectedValue)
+}

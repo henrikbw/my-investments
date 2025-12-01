@@ -8,6 +8,7 @@ import { PortfolioSummary } from '@/components/dashboard/PortfolioSummary'
 import { GrowthChart } from '@/components/dashboard/GrowthChart'
 import { AllocationChart } from '@/components/dashboard/AllocationChart'
 import { ModuleCards } from '@/components/dashboard/ModuleCards'
+import { IndividualProjections } from '@/components/dashboard/IndividualProjections'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,6 +17,7 @@ import {
   generatePortfolioProjectionsWithBreakdown,
   prepareGrowthChartData,
   prepareAllocationChartData,
+  prepareIndividualProjections,
 } from '@/services/projections'
 import { PROJECTION_YEARS } from '@/constants/defaults'
 
@@ -53,6 +55,7 @@ export function Dashboard() {
   const selectedProjection = projections.find((p) => p.year === selectedYear) || null
   const growthData = prepareGrowthChartData(investments, selectedYear)
   const allocationData = prepareAllocationChartData(investments, selectedYear)
+  const individualProjections = prepareIndividualProjections(investments, selectedYear)
 
   return (
     <div className="space-y-8">
@@ -87,6 +90,8 @@ export function Dashboard() {
         <GrowthChart data={growthData} />
         <AllocationChart data={allocationData} year={selectedYear} />
       </div>
+
+      <IndividualProjections data={individualProjections} selectedYear={selectedYear} />
 
       <div>
         <h3 className="text-xl font-semibold mb-4">Investment Modules</h3>
