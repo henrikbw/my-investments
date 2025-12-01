@@ -1,6 +1,6 @@
 /**
  * Equity summary component for dashboard
- * Shows total equity across all linked assets and loans
+ * Shows total equity across ALL assets and loans
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +11,7 @@ import { calculateFutureValue } from '@/services/calculations'
 import { Investment } from '@/types'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { MODULE_LABELS } from '@/constants/defaults'
 
 interface EquitySummaryProps {
   selectedYear: number
@@ -18,64 +19,76 @@ interface EquitySummaryProps {
 }
 
 export function EquitySummary({ selectedYear, investments }: EquitySummaryProps) {
-  const { loans, equityData, totalLoanBalance, totalEquity } = useLoans()
+  const { loans, totalLoanBalance, totalEquity } = useLoans()
 
-  // If no loans, don't show this section
-  if (loans.length === 0) {
-    return null
-  }
-
-  // Calculate projected equity for selected year
-  const projectedEquityData = equityData.map((data) => {
-    const asset = investments.find((inv) => inv.id === data.assetId)
-    if (!asset) return { ...data, projectedAssetValue: 0, projectedLoanBalance: 0, projectedEquity: 0 }
-
-    // Calculate projected asset value
-    const projectedAssetValue = calculateFutureValue(asset, selectedYear)
-
-    // Calculate projected loan balance
-    const linkedLoans = loans.filter((loan) => loan.linkedAssetId === data.assetId)
-    const projectedLoanBalance = linkedLoans.reduce(
-      (sum, loan) => sum + calculateBalanceAfterYears(loan, selectedYear),
-      0
-    )
-
-    return {
-      ...data,
-      projectedAssetValue,
-      projectedLoanBalance,
-      projectedEquity: projectedAssetValue - projectedLoanBalance,
-    }
-  })
-
-  const totalProjectedEquity = projectedEquityData.reduce(
-    (sum, data) => sum + data.projectedEquity,
+  // Calculate total projected asset value for ALL investments
+  const totalCurrentAssetValue = investments.reduce(
+    (sum, inv) => sum + inv.currentValue,
     0
   )
 
+  const totalProjectedAssetValue = investments.reduce(
+    (sum, inv) => sum + calculateFutureValue(inv, selectedYear),
+    0
+  )
+
+  // Calculate total projected loan balance for ALL loans
+  const totalProjectedLoanBalance = loans.reduce(
+    (sum, loan) => sum + calculateBalanceAfterYears(loan, selectedYear),
+    0
+  )
+
+  const totalProjectedEquity = totalProjectedAssetValue - totalProjectedLoanBalance
   const equityGrowth = totalProjectedEquity - totalEquity
+
+  // Group investments by type for display
+  const investmentsByType = investments.reduce((acc, inv) => {
+    if (!acc[inv.type]) {
+      acc[inv.type] = []
+    }
+    acc[inv.type].push(inv)
+    return acc
+  }, {} as Record<string, Investment[]>)
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-semibold">Equity Overview</h3>
-        <Link to="/loans">
-          <Button variant="outline" size="sm">
-            Manage Loans
-          </Button>
-        </Link>
+        <h3 className="text-xl font-semibold">Net Worth Overview</h3>
+        {loans.length > 0 && (
+          <Link to="/loans">
+            <Button variant="outline" size="sm">
+              Manage Loans
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Loan Balance
+              Total Assets
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(totalLoanBalance)}
+            <div className="text-2xl font-bold text-green-600">
+              {formatCurrency(totalCurrentAssetValue)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {investments.length} investment{investments.length !== 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Liabilities
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${totalLoanBalance > 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+              {totalLoanBalance > 0 ? formatCurrency(totalLoanBalance) : formatCurrency(0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {loans.length} loan{loans.length !== 1 ? 's' : ''}
@@ -86,7 +99,7 @@ export function EquitySummary({ selectedYear, investments }: EquitySummaryProps)
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Current Equity
+              Current Net Worth
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -94,7 +107,7 @@ export function EquitySummary({ selectedYear, investments }: EquitySummaryProps)
               {formatCurrency(totalEquity)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Assets minus loans
+              Assets minus liabilities
             </p>
           </CardContent>
         </Card>
@@ -102,7 +115,7 @@ export function EquitySummary({ selectedYear, investments }: EquitySummaryProps)
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Projected Equity ({selectedYear}y)
+              Projected Net Worth ({selectedYear}y)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -110,56 +123,65 @@ export function EquitySummary({ selectedYear, investments }: EquitySummaryProps)
               {formatCurrency(totalProjectedEquity)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              After loan payments
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Equity Growth ({selectedYear}y)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${equityGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {equityGrowth >= 0 ? '+' : ''}{formatCurrency(equityGrowth)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              From payments & appreciation
+              {equityGrowth >= 0 ? '+' : ''}{formatCurrency(equityGrowth)} growth
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {projectedEquityData.length > 0 && (
+      {Object.entries(investmentsByType).length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Equity by Asset</CardTitle>
+            <CardTitle className="text-sm font-medium">Assets by Category</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {projectedEquityData.map((data) => (
-                <div
-                  key={data.assetId}
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                >
+              {Object.entries(investmentsByType).map(([type, invs]) => {
+                const currentValue = invs.reduce((sum, inv) => sum + inv.currentValue, 0)
+                const projectedValue = invs.reduce(
+                  (sum, inv) => sum + calculateFutureValue(inv, selectedYear),
+                  0
+                )
+                return (
+                  <div
+                    key={type}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium">{MODULE_LABELS[type as keyof typeof MODULE_LABELS]}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {invs.length} investment{invs.length !== 1 ? 's' : ''} · Current: {formatCurrency(currentValue)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-green-600">
+                        {formatCurrency(projectedValue)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        in {selectedYear} year{selectedYear > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+              {loans.length > 0 && (
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border-t border-border mt-2 pt-3">
                   <div>
-                    <p className="font-medium">{data.assetName}</p>
+                    <p className="font-medium">Loans (Liabilities)</p>
                     <p className="text-sm text-muted-foreground">
-                      Current: {formatCurrency(data.equity)}
+                      {loans.length} loan{loans.length !== 1 ? 's' : ''} · Current: {formatCurrency(totalLoanBalance)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className={`font-bold ${data.projectedEquity >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatCurrency(data.projectedEquity)}
+                    <p className="font-bold text-red-600">
+                      -{formatCurrency(totalProjectedLoanBalance)}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       in {selectedYear} year{selectedYear > 1 ? 's' : ''}
                     </p>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
