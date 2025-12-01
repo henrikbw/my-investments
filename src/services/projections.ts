@@ -294,6 +294,15 @@ export function calculateAllocationForYear(
 }
 
 /**
+ * Individual investment data for tooltips
+ */
+export interface InvestmentDetail {
+  id: string
+  name: string
+  value: number
+}
+
+/**
  * Prepare data for allocation pie chart
  */
 export interface AllocationChartData {
@@ -301,7 +310,11 @@ export interface AllocationChartData {
   value: number
   percentage: number
   color: string
+  investments: InvestmentDetail[]
 }
+
+/** Maximum number of individual investments to show in tooltip */
+const MAX_INVESTMENTS_IN_TOOLTIP = 5
 
 export function prepareAllocationChartData(
   investments: Investment[],
@@ -311,10 +324,24 @@ export function prepareAllocationChartData(
     ? calculateAllocation(investments)
     : calculateAllocationForYear(investments, years)
 
-  return allocation.map((item) => ({
-    name: item.type,
-    value: item.value,
-    percentage: item.percentage,
-    color: MODULE_COLORS[item.type],
-  }))
+  return allocation.map((item) => {
+    // Get individual investments for this type, projected to the target year
+    const typeInvestments = investments
+      .filter((inv) => inv.type === item.type)
+      .map((inv) => ({
+        id: inv.id,
+        name: inv.name,
+        value: years === 0 ? inv.currentValue : calculateFutureValue(inv, years),
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, MAX_INVESTMENTS_IN_TOOLTIP)
+
+    return {
+      name: item.type,
+      value: item.value,
+      percentage: item.percentage,
+      color: MODULE_COLORS[item.type],
+      investments: typeInvestments,
+    }
+  })
 }

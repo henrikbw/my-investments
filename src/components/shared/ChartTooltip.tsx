@@ -5,7 +5,7 @@
 import { MODULE_LABELS, MODULE_COLORS } from '@/constants/defaults'
 import { formatCurrency, formatPercentage } from '@/utils/format'
 import { InvestmentType } from '@/types'
-import { GrowthChartData } from '@/services/projections'
+import { GrowthChartData, InvestmentDetail } from '@/services/projections'
 
 interface GrowthChartTooltipProps {
   active?: boolean
@@ -108,14 +108,14 @@ interface AllocationTooltipProps {
       value: number
       percentage: number
       color: string
-      count?: number
+      investments: InvestmentDetail[]
     }
   }>
 }
 
 /**
  * Custom tooltip for the allocation pie chart
- * Shows investment type, projected value, percentage, and count
+ * Shows investment type, projected value, percentage, and individual investments
  */
 export function AllocationChartTooltip({ active, payload }: AllocationTooltipProps) {
   if (!active || !payload || payload.length === 0) {
@@ -124,6 +124,7 @@ export function AllocationChartTooltip({ active, payload }: AllocationTooltipPro
 
   const data = payload[0].payload
   const investmentType = data.name as InvestmentType
+  const investments = data.investments || []
 
   return (
     <div className="rounded-lg border border-border bg-card p-3 shadow-lg">
@@ -152,6 +153,27 @@ export function AllocationChartTooltip({ active, payload }: AllocationTooltipPro
           </span>
         </div>
       </div>
+
+      {investments.length > 0 && (
+        <div className="mt-2 border-t border-border pt-2">
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Investments</p>
+          <div className="space-y-0.5">
+            {investments.map((inv) => (
+              <div
+                key={inv.id}
+                className="flex items-center justify-between gap-4"
+              >
+                <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                  {inv.name}
+                </span>
+                <span className="text-xs text-card-foreground">
+                  {formatCurrency(inv.value)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
