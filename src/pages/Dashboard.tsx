@@ -59,7 +59,6 @@ export function Dashboard() {
   const allocationData = prepareAllocationChartData(investments, selectedYear)
   const individualProjections = prepareIndividualProjections(investments, selectedYear)
   const equityChartData = prepareEquityChartData(investments, loans, selectedYear)
-  const hasEquityData = equityChartData.length > 0
 
   return (
     <div className="space-y-8">
@@ -97,12 +96,12 @@ export function Dashboard() {
 
       <IndividualProjections data={individualProjections} selectedYear={selectedYear} />
 
-      {hasEquityData && (
-        <div className="space-y-6">
+      <div className="space-y-6">
+        {equityChartData.length > 0 && (
           <EquityProjectionChart data={equityChartData} />
-          <EquitySummary selectedYear={selectedYear} investments={investments} />
-        </div>
-      )}
+        )}
+        <EquitySummary selectedYear={selectedYear} investments={investments} />
+      </div>
 
       <div>
         <h3 className="text-xl font-semibold mb-4">Investment Modules</h3>

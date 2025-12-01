@@ -416,7 +416,8 @@ export interface EquityChartData {
 
 /**
  * Prepare equity projection chart data
- * Shows assets, loans, and equity over time for linked assets
+ * Shows total assets, total loans, and net equity over time
+ * Includes ALL investments (not just those with linked loans)
  */
 export function prepareEquityChartData(
   investments: Investment[],
@@ -426,33 +427,24 @@ export function prepareEquityChartData(
   const currentYear = new Date().getFullYear()
   const data: EquityChartData[] = []
 
-  // Get all assets that have loans linked to them
-  const linkedAssetIds = new Set(
-    loans
-      .filter((loan) => loan.linkedAssetId)
-      .map((loan) => loan.linkedAssetId as string)
-  )
-
-  // Get the linked assets
-  const linkedAssets = investments.filter((inv) => linkedAssetIds.has(inv.id))
-
-  // If no linked assets, return empty data
-  if (linkedAssets.length === 0) {
+  // If no investments, return empty data
+  if (investments.length === 0) {
     return []
   }
 
   // Generate data for each year
   for (let year = 0; year <= maxYears; year++) {
-    // Calculate total asset value for linked assets
-    const assetValue = linkedAssets.reduce(
+    // Calculate total asset value for ALL investments
+    const assetValue = investments.reduce(
       (sum, asset) => sum + calculateFutureValue(asset, year),
       0
     )
 
-    // Calculate total loan balance for loans linked to these assets
-    const loanBalance = loans
-      .filter((loan) => loan.linkedAssetId && linkedAssetIds.has(loan.linkedAssetId))
-      .reduce((sum, loan) => sum + calculateBalanceAfterYears(loan, year), 0)
+    // Calculate total loan balance for ALL loans
+    const loanBalance = loans.reduce(
+      (sum, loan) => sum + calculateBalanceAfterYears(loan, year),
+      0
+    )
 
     const equity = assetValue - loanBalance
 
