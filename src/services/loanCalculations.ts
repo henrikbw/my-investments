@@ -40,16 +40,21 @@ export function calculateSerialMonthlyPrincipal(
 
 /**
  * Generate full amortization schedule for a loan
+ * @param interestRateOverride - Optional interest rate to use instead of the loan's actual rate
  */
-export function generateAmortizationSchedule(loan: Loan): LoanPayment[] {
+export function generateAmortizationSchedule(
+  loan: Loan,
+  interestRateOverride?: number | null
+): LoanPayment[] {
+  const effectiveRate = interestRateOverride ?? loan.interestRate
   const schedule: LoanPayment[] = []
-  const monthlyRate = loan.interestRate / 100 / 12
+  const monthlyRate = effectiveRate / 100 / 12
   let balance = loan.loanAmount
 
   if (loan.repaymentType === 'annuity') {
     const monthlyPayment = calculateAnnuityMonthlyPayment(
       loan.loanAmount,
-      loan.interestRate,
+      effectiveRate,
       loan.termMonths
     )
 

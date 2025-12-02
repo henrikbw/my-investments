@@ -8,7 +8,8 @@ import {
   Loan,
   FIREChartDataPoint,
   FIRESummary,
-  PASSIVE_INCOME_RATES,
+  FIRESettings,
+  DEFAULT_FIRE_SETTINGS,
 } from '@/types'
 import { calculateFutureValue } from './calculations'
 import { generateAmortizationSchedule } from './loanCalculations'
@@ -18,13 +19,16 @@ import { generateAmortizationSchedule } from './loanCalculations'
  * - Real Estate: Uses actual monthlyRentalIncome field (0 if not set)
  * - Others: Uses percentage of current value / 12
  */
-export function calculateMonthlyIncome(investment: Investment): number {
+export function calculateMonthlyIncome(
+  investment: Investment,
+  settings: FIRESettings = DEFAULT_FIRE_SETTINGS
+): number {
   // Real estate only generates income from actual rental income
   if (investment.type === 'real-estate') {
     return investment.monthlyRentalIncome ?? 0
   }
 
-  const annualRate = PASSIVE_INCOME_RATES[investment.type] / 100
+  const annualRate = settings.passiveIncomeRates[investment.type] / 100
   return (investment.currentValue * annualRate) / 12
 }
 
@@ -33,35 +37,37 @@ export function calculateMonthlyIncome(investment: Investment): number {
  */
 export function calculateProjectedMonthlyIncome(
   investment: Investment,
-  years: number
+  years: number,
+  settings: FIRESettings = DEFAULT_FIRE_SETTINGS
 ): number {
   // Real estate only generates income from actual rental income
   if (investment.type === 'real-estate') {
     const rentalIncome = investment.monthlyRentalIncome ?? 0
     if (rentalIncome === 0) return 0
 
-    // Assume rental income grows with property value
-    const futureValue = calculateFutureValue(investment, years)
-    const growthFactor = investment.currentValue > 0
-      ? futureValue / investment.currentValue
-      : 1
+    // Apply rental income yearly increase rate
+    const annualIncrease = settings.rentalIncomeYearlyIncrease / 100
+    const growthFactor = Math.pow(1 + annualIncrease, years)
     return rentalIncome * growthFactor
   }
 
   const futureValue = calculateFutureValue(investment, years)
-  const annualRate = PASSIVE_INCOME_RATES[investment.type] / 100
+  const annualRate = settings.passiveIncomeRates[investment.type] / 100
   return (futureValue * annualRate) / 12
 }
 
 /**
  * Calculate current monthly loan payment (interest + principal)
  */
-export function calculateCurrentLoanPayment(loan: Loan): {
+export function calculateCurrentLoanPayment(
+  loan: Loan,
+  interestRateOverride?: number | null
+): {
   total: number
   interest: number
   principal: number
 } {
-  const schedule = generateAmortizationSchedule(loan)
+  const schedule = generateAmortizationSchedule(loan, interestRateOverride)
   const startDate = new Date(loan.startDate)
   const now = new Date()
 
@@ -100,9 +106,10 @@ export function calculateCurrentLoanPayment(loan: Loan): {
  */
 export function calculateLoanPaymentAtMonth(
   loan: Loan,
-  monthsFromNow: number
+  monthsFromNow: number,
+  interestRateOverride?: number | null
 ): { total: number; interest: number; principal: number } {
-  const schedule = generateAmortizationSchedule(loan)
+  const schedule = generateAmortizationSchedule(loan, interestRateOverride)
   const startDate = new Date(loan.startDate)
   const now = new Date()
 
@@ -142,11 +149,12 @@ export function calculateLoanPaymentAtMonth(
  */
 function calculateTotalLoanExpenses(
   loans: Loan[],
-  monthsFromNow: number = 0
+  monthsFromNow: number = 0,
+  interestRateOverride?: number | null
 ): { total: number; interest: number; principal: number } {
   return loans.reduce(
     (acc, loan) => {
-      const payment = calculateLoanPaymentAtMonth(loan, monthsFromNow)
+      const payment = calculateLoanPaymentAtMonth(loan, monthsFromNow, interestRateOverride)
       return {
         total: acc.total + payment.total,
         interest: acc.interest + payment.interest,
@@ -162,7 +170,8 @@ function calculateTotalLoanExpenses(
  */
 function calculateTotalMonthlyIncomeAtYear(
   investments: Investment[],
-  years: number
+  years: number,
+  settings: FIRESettings = DEFAULT_FIRE_SETTINGS
 ): {
   total: number
   byType: {
@@ -180,7 +189,7 @@ function calculateTotalMonthlyIncomeAtYear(
   }
 
   investments.forEach((inv) => {
-    const income = calculateProjectedMonthlyIncome(inv, years)
+    const income = calculateProjectedMonthlyIncome(inv, years, settings)
     switch (inv.type) {
       case 'real-estate':
         byType.realEstate += income
@@ -244,31 +253,35 @@ function calculateNetWorth(
 export function prepareFIREChartData(
   investments: Investment[],
   loans: Loan[],
-  maxYears: number = 30
+  maxYears: number = 30,
+  settings: FIRESettings = DEFAULT_FIRE_SETTINGS
 ): FIREChartDataPoint[] {
   const currentYear = new Date().getFullYear()
   const data: FIREChartDataPoint[] = []
+  const requiredExpenses = settings.monthlyRequiredExpenses
 
   for (let year = 0; year <= maxYears; year++) {
     const monthsFromNow = year * 12
-    const income = calculateTotalMonthlyIncomeAtYear(investments, year)
-    const expenses = calculateTotalLoanExpenses(loans, monthsFromNow)
+    const income = calculateTotalMonthlyIncomeAtYear(investments, year, settings)
+    const loanExpenses = calculateTotalLoanExpenses(loans, monthsFromNow, settings.interestRateOverride)
     const netWorth = calculateNetWorth(investments, loans, year)
+    const totalExpenses = loanExpenses.total + requiredExpenses
 
     data.push({
       year,
       actualYear: currentYear + year,
       label: (currentYear + year).toString(),
       monthlyIncome: Math.round(income.total * 100) / 100,
-      monthlyExpenses: Math.round(expenses.total * 100) / 100,
-      surplus: Math.round((income.total - expenses.total) * 100) / 100,
+      monthlyExpenses: Math.round(totalExpenses * 100) / 100,
+      surplus: Math.round((income.total - totalExpenses) * 100) / 100,
       netWorth: Math.round(netWorth * 100) / 100,
       incomeFromRealEstate: Math.round(income.byType.realEstate * 100) / 100,
       incomeFromFunds: Math.round(income.byType.funds * 100) / 100,
       incomeFromStocks: Math.round(income.byType.stocks * 100) / 100,
       incomeFromCrypto: Math.round(income.byType.crypto * 100) / 100,
-      loanInterest: Math.round(expenses.interest * 100) / 100,
-      loanPrincipal: Math.round(expenses.principal * 100) / 100,
+      loanInterest: Math.round(loanExpenses.interest * 100) / 100,
+      loanPrincipal: Math.round(loanExpenses.principal * 100) / 100,
+      requiredExpenses: Math.round(requiredExpenses * 100) / 100,
     })
   }
 
@@ -280,19 +293,22 @@ export function prepareFIREChartData(
  */
 export function calculateFIRESummary(
   investments: Investment[],
-  loans: Loan[]
+  loans: Loan[],
+  settings: FIRESettings = DEFAULT_FIRE_SETTINGS
 ): FIRESummary {
-  const currentIncome = calculateTotalMonthlyIncomeAtYear(investments, 0)
-  const currentExpenses = calculateTotalLoanExpenses(loans, 0)
+  const currentIncome = calculateTotalMonthlyIncomeAtYear(investments, 0, settings)
+  const loanExpenses = calculateTotalLoanExpenses(loans, 0, settings.interestRateOverride)
   const currentNetWorth = calculateNetWorth(investments, loans, 0)
+  const requiredExpenses = settings.monthlyRequiredExpenses
+  const totalExpenses = loanExpenses.total + requiredExpenses
 
   const isFinanciallyIndependent =
-    currentIncome.total >= currentExpenses.total && currentExpenses.total > 0
+    currentIncome.total >= totalExpenses && totalExpenses > 0
 
   // Calculate FI progress (income as percentage of expenses)
   const fiProgress =
-    currentExpenses.total > 0
-      ? (currentIncome.total / currentExpenses.total) * 100
+    totalExpenses > 0
+      ? (currentIncome.total / totalExpenses) * 100
       : currentIncome.total > 0
         ? 100
         : 0
@@ -301,14 +317,15 @@ export function calculateFIRESummary(
   let yearsToFI: number | null = null
   let fiDate: Date | null = null
 
-  if (!isFinanciallyIndependent && currentExpenses.total > 0) {
+  if (!isFinanciallyIndependent && totalExpenses > 0) {
     // Search up to 50 years
     for (let year = 1; year <= 50; year++) {
       const monthsFromNow = year * 12
-      const projectedIncome = calculateTotalMonthlyIncomeAtYear(investments, year)
-      const projectedExpenses = calculateTotalLoanExpenses(loans, monthsFromNow)
+      const projectedIncome = calculateTotalMonthlyIncomeAtYear(investments, year, settings)
+      const projectedLoanExpenses = calculateTotalLoanExpenses(loans, monthsFromNow, settings.interestRateOverride)
+      const projectedTotalExpenses = projectedLoanExpenses.total + requiredExpenses
 
-      if (projectedIncome.total >= projectedExpenses.total) {
+      if (projectedIncome.total >= projectedTotalExpenses) {
         yearsToFI = year
         fiDate = new Date()
         fiDate.setFullYear(fiDate.getFullYear() + year)
@@ -322,9 +339,9 @@ export function calculateFIRESummary(
 
   return {
     currentMonthlyIncome: Math.round(currentIncome.total * 100) / 100,
-    currentMonthlyExpenses: Math.round(currentExpenses.total * 100) / 100,
+    currentMonthlyExpenses: Math.round(totalExpenses * 100) / 100,
     currentSurplus:
-      Math.round((currentIncome.total - currentExpenses.total) * 100) / 100,
+      Math.round((currentIncome.total - totalExpenses) * 100) / 100,
     currentNetWorth: Math.round(currentNetWorth * 100) / 100,
     yearsToFI,
     fiDate,

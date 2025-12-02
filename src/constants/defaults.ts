@@ -51,5 +51,6 @@ export const LOAN_LABELS: Record<LoanType, string> = {
 
 export const STORAGE_KEY = 'my-investments-portfolio'
 export const LOANS_STORAGE_KEY = 'my-investments-loans'
+export const FIRE_SETTINGS_STORAGE_KEY = 'my-investments-fire-settings'
 
 export const PROJECTION_YEARS = [1, 5, 10, 20] as const
