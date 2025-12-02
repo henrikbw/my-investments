@@ -5,15 +5,44 @@
 import { InvestmentType } from './investments'
 
 /**
- * Passive income rates by investment type (annual yield as percentage)
+ * Default passive income rates by investment type (annual yield as percentage)
  * These represent the "safe withdrawal" or income generation rates
  * Note: Real estate uses actual rental income, not a percentage
  */
-export const PASSIVE_INCOME_RATES: Record<InvestmentType, number> = {
+export const DEFAULT_PASSIVE_INCOME_RATES: Record<InvestmentType, number> = {
   'real-estate': 0,  // Uses actual monthlyRentalIncome field, not percentage
   fund: 4,           // 4% safe withdrawal rate
   stock: 3,          // 3% dividend/withdrawal rate
   crypto: 2,         // 2% conservative rate for crypto
+}
+
+/**
+ * @deprecated Use DEFAULT_PASSIVE_INCOME_RATES instead
+ */
+export const PASSIVE_INCOME_RATES = DEFAULT_PASSIVE_INCOME_RATES
+
+/**
+ * FIRE module settings - user-configurable parameters
+ */
+export interface FIRESettings {
+  /** Monthly required expenses after loan costs (living expenses, etc.) */
+  monthlyRequiredExpenses: number
+  /** Passive income rates by investment type (% of value withdrawn annually) */
+  passiveIncomeRates: Record<InvestmentType, number>
+  /** Interest rate override for FIRE calculations (only affects FIRE module) */
+  interestRateOverride: number | null
+  /** Annual percentage increase for rental income */
+  rentalIncomeYearlyIncrease: number
+}
+
+/**
+ * Default FIRE settings
+ */
+export const DEFAULT_FIRE_SETTINGS: FIRESettings = {
+  monthlyRequiredExpenses: 0,
+  passiveIncomeRates: { ...DEFAULT_PASSIVE_INCOME_RATES },
+  interestRateOverride: null,
+  rentalIncomeYearlyIncrease: 2, // 2% annual increase in rental income
 }
 
 /**
@@ -24,7 +53,7 @@ export interface FIREChartDataPoint {
   actualYear: number
   label: string
   monthlyIncome: number      // Total passive income from all investments
-  monthlyExpenses: number    // Total loan costs (interest + principal)
+  monthlyExpenses: number    // Total expenses (loan costs + required expenses)
   surplus: number            // Income - Expenses
   netWorth: number           // Total assets - Total loans
   // Breakdown of income by type
@@ -35,6 +64,7 @@ export interface FIREChartDataPoint {
   // Breakdown of expenses
   loanInterest: number
   loanPrincipal: number
+  requiredExpenses: number   // Monthly required living expenses
 }
 
 /**

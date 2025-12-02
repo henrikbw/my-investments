@@ -3,8 +3,21 @@
  * Shows income vs expenses projection and FI progress
  */
 
+import { useState } from 'react'
 import { useFIRE } from '@/hooks/useFIRE'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   LineChart,
   Line,
@@ -17,7 +30,7 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { formatCurrency } from '@/utils/format'
-import { FIREChartDataPoint, PASSIVE_INCOME_RATES } from '@/types'
+import { FIREChartDataPoint, FIRESettings, DEFAULT_FIRE_SETTINGS } from '@/types'
 import { MODULE_COLORS, MODULE_LABELS } from '@/constants/defaults'
 
 const FIRE_COLORS = {
@@ -106,16 +119,26 @@ function FIREChartTooltip({ active, payload }: FIRETooltipProps) {
               {formatCurrency(data.monthlyExpenses)}
             </span>
           </div>
-          {(data.loanInterest > 0 || data.loanPrincipal > 0) && (
+          {(data.loanInterest > 0 || data.loanPrincipal > 0 || data.requiredExpenses > 0) && (
             <div className="mt-1 pl-2 border-l-2 border-red-200 space-y-0.5">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Interest</span>
-                <span>{formatCurrency(data.loanInterest)}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Principal</span>
-                <span>{formatCurrency(data.loanPrincipal)}</span>
-              </div>
+              {data.loanInterest > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Interest</span>
+                  <span>{formatCurrency(data.loanInterest)}</span>
+                </div>
+              )}
+              {data.loanPrincipal > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Principal</span>
+                  <span>{formatCurrency(data.loanPrincipal)}</span>
+                </div>
+              )}
+              {data.requiredExpenses > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Living Expenses</span>
+                  <span>{formatCurrency(data.requiredExpenses)}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -222,7 +245,7 @@ function SummaryCard({
   )
 }
 
-function EmptyState() {
+function EmptyState({ settings }: { settings: FIRESettings }) {
   return (
     <Card className="col-span-full">
       <CardContent className="flex flex-col items-center justify-center py-12">
@@ -242,15 +265,15 @@ function EmptyState() {
               </span>
               <span className="flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: MODULE_COLORS.fund }} />
-                Funds: {PASSIVE_INCOME_RATES.fund}%
+                Funds: {settings.passiveIncomeRates.fund}%
               </span>
               <span className="flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: MODULE_COLORS.stock }} />
-                Stocks: {PASSIVE_INCOME_RATES.stock}%
+                Stocks: {settings.passiveIncomeRates.stock}%
               </span>
               <span className="flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: MODULE_COLORS.crypto }} />
-                Crypto: {PASSIVE_INCOME_RATES.crypto}%
+                Crypto: {settings.passiveIncomeRates.crypto}%
               </span>
             </div>
           </div>
@@ -260,8 +283,207 @@ function EmptyState() {
   )
 }
 
+interface FIRESettingsDialogProps {
+  settings: FIRESettings
+  onUpdate: (settings: Partial<FIRESettings>) => void
+  onReset: () => void
+}
+
+function FIRESettingsDialog({ settings, onUpdate, onReset }: FIRESettingsDialogProps) {
+  const [open, setOpen] = useState(false)
+  const [formData, setFormData] = useState(settings)
+
+  const handleOpen = (isOpen: boolean) => {
+    setOpen(isOpen)
+    if (isOpen) {
+      setFormData(settings)
+    }
+  }
+
+  const handleSave = () => {
+    onUpdate(formData)
+    setOpen(false)
+  }
+
+  const handleReset = () => {
+    setFormData({ ...DEFAULT_FIRE_SETTINGS })
+    onReset()
+    setOpen(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          Settings
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>FIRE Settings</DialogTitle>
+          <DialogDescription>
+            Configure your financial independence calculations
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          {/* Required Monthly Expenses */}
+          <div className="space-y-2">
+            <Label htmlFor="requiredExpenses">Monthly Required Expenses</Label>
+            <Input
+              id="requiredExpenses"
+              type="number"
+              min="0"
+              step="100"
+              value={formData.monthlyRequiredExpenses}
+              onChange={(e) => setFormData({
+                ...formData,
+                monthlyRequiredExpenses: parseFloat(e.target.value) || 0,
+              })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Living expenses beyond loan costs (food, utilities, etc.)
+            </p>
+          </div>
+
+          {/* Interest Rate Override */}
+          <div className="space-y-2">
+            <Label htmlFor="interestRate">Interest Rate Override (%)</Label>
+            <Input
+              id="interestRate"
+              type="number"
+              min="0"
+              max="30"
+              step="0.1"
+              placeholder="Leave empty to use actual loan rates"
+              value={formData.interestRateOverride ?? ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                interestRateOverride: e.target.value ? parseFloat(e.target.value) : null,
+              })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Override interest rate for FIRE calculations only
+            </p>
+          </div>
+
+          {/* Rental Income Yearly Increase */}
+          <div className="space-y-2">
+            <Label htmlFor="rentalIncrease">Rental Income Yearly Increase (%)</Label>
+            <Input
+              id="rentalIncrease"
+              type="number"
+              min="0"
+              max="20"
+              step="0.5"
+              value={formData.rentalIncomeYearlyIncrease}
+              onChange={(e) => setFormData({
+                ...formData,
+                rentalIncomeYearlyIncrease: parseFloat(e.target.value) || 0,
+              })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Expected yearly increase in rental income
+            </p>
+          </div>
+
+          {/* Passive Income Rates */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Passive Income Rates</Label>
+            <p className="text-xs text-muted-foreground">
+              Percentage of asset value withdrawn annually as passive income
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="stockRate" className="text-xs flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: MODULE_COLORS.stock }} />
+                  Stocks (%)
+                </Label>
+                <Input
+                  id="stockRate"
+                  type="number"
+                  min="0"
+                  max="20"
+                  step="0.5"
+                  value={formData.passiveIncomeRates.stock}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    passiveIncomeRates: {
+                      ...formData.passiveIncomeRates,
+                      stock: parseFloat(e.target.value) || 0,
+                    },
+                  })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="fundRate" className="text-xs flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: MODULE_COLORS.fund }} />
+                  Funds (%)
+                </Label>
+                <Input
+                  id="fundRate"
+                  type="number"
+                  min="0"
+                  max="20"
+                  step="0.5"
+                  value={formData.passiveIncomeRates.fund}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    passiveIncomeRates: {
+                      ...formData.passiveIncomeRates,
+                      fund: parseFloat(e.target.value) || 0,
+                    },
+                  })}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="cryptoRate" className="text-xs flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: MODULE_COLORS.crypto }} />
+                  Crypto (%)
+                </Label>
+                <Input
+                  id="cryptoRate"
+                  type="number"
+                  min="0"
+                  max="20"
+                  step="0.5"
+                  value={formData.passiveIncomeRates.crypto}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    passiveIncomeRates: {
+                      ...formData.passiveIncomeRates,
+                      crypto: parseFloat(e.target.value) || 0,
+                    },
+                  })}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="flex justify-between sm:justify-between">
+          <Button variant="ghost" onClick={handleReset}>
+            Reset to Defaults
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>
+              Save
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function FIREPage() {
-  const { chartData, summary, loading, hasData } = useFIRE(30)
+  const { chartData, summary, loading, hasData, settings, updateSettings, resetSettings } = useFIRE(30)
 
   if (loading) {
     return (
@@ -282,15 +504,22 @@ export function FIREPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">FIRE Journey</h1>
-        <p className="text-muted-foreground mt-1">
-          Track your path to Financial Independence
-        </p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">FIRE Journey</h1>
+          <p className="text-muted-foreground mt-1">
+            Track your path to Financial Independence
+          </p>
+        </div>
+        <FIRESettingsDialog
+          settings={settings}
+          onUpdate={updateSettings}
+          onReset={resetSettings}
+        />
       </div>
 
       {!hasData ? (
-        <EmptyState />
+        <EmptyState settings={settings} />
       ) : (
         <div className="space-y-6">
           {/* Summary Cards */}
@@ -304,7 +533,10 @@ export function FIREPage() {
             <SummaryCard
               title="Monthly Expenses"
               value={formatCurrency(summary.currentMonthlyExpenses)}
-              subtitle="Loan payments (interest + principal)"
+              subtitle={settings.monthlyRequiredExpenses > 0
+                ? `Loans + ${formatCurrency(settings.monthlyRequiredExpenses)} living expenses`
+                : "Loan payments (interest + principal)"
+              }
               valueColor="red"
             />
             <SummaryCard
@@ -424,28 +656,30 @@ export function FIREPage() {
                   <span className="h-3 w-3 rounded-full mt-1" style={{ backgroundColor: MODULE_COLORS['real-estate'] }} />
                   <div>
                     <p className="font-medium">{MODULE_LABELS['real-estate']}</p>
-                    <p className="text-muted-foreground">Actual rental income (grows with property value)</p>
+                    <p className="text-muted-foreground">
+                      Actual rental income (+{settings.rentalIncomeYearlyIncrease}%/year)
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="h-3 w-3 rounded-full mt-1" style={{ backgroundColor: MODULE_COLORS.fund }} />
                   <div>
                     <p className="font-medium">{MODULE_LABELS.fund}</p>
-                    <p className="text-muted-foreground">{PASSIVE_INCOME_RATES.fund}% annual withdrawal rate</p>
+                    <p className="text-muted-foreground">{settings.passiveIncomeRates.fund}% annual withdrawal rate</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="h-3 w-3 rounded-full mt-1" style={{ backgroundColor: MODULE_COLORS.stock }} />
                   <div>
                     <p className="font-medium">{MODULE_LABELS.stock}</p>
-                    <p className="text-muted-foreground">{PASSIVE_INCOME_RATES.stock}% annual withdrawal rate</p>
+                    <p className="text-muted-foreground">{settings.passiveIncomeRates.stock}% annual withdrawal rate</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="h-3 w-3 rounded-full mt-1" style={{ backgroundColor: MODULE_COLORS.crypto }} />
                   <div>
                     <p className="font-medium">{MODULE_LABELS.crypto}</p>
-                    <p className="text-muted-foreground">{PASSIVE_INCOME_RATES.crypto}% annual withdrawal rate</p>
+                    <p className="text-muted-foreground">{settings.passiveIncomeRates.crypto}% annual withdrawal rate</p>
                   </div>
                 </div>
               </div>
