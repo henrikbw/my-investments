@@ -11,6 +11,7 @@ import { FundsPage } from '@/pages/FundsPage'
 import { RealEstatePage } from '@/pages/RealEstatePage'
 import { CryptoPage } from '@/pages/CryptoPage'
 import { LoansPage } from '@/pages/LoansPage'
+import { FIREPage } from '@/pages/FIREPage'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
             <Route path="/real-estate" element={<RealEstatePage />} />
             <Route path="/crypto" element={<CryptoPage />} />
             <Route path="/loans" element={<LoansPage />} />
+            <Route path="/fire" element={<FIREPage />} />
           </Routes>
         </Layout>
       </PortfolioProvider>
