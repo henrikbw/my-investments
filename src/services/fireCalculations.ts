@@ -11,7 +11,7 @@ import {
   FIRESettings,
   DEFAULT_FIRE_SETTINGS,
 } from '@/types'
-import { calculateFutureValue } from './calculations'
+import { calculateFutureValue, calculateCurrentValue } from './calculations'
 import { generateAmortizationSchedule } from './loanCalculations'
 
 /**
@@ -29,7 +29,8 @@ export function calculateMonthlyIncome(
   }
 
   const annualRate = settings.passiveIncomeRates[investment.type] / 100
-  return (investment.currentValue * annualRate) / 12
+  const currentValue = calculateCurrentValue(investment)
+  return (currentValue * annualRate) / 12
 }
 
 /**

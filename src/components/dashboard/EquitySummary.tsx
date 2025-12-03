@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/utils/format'
 import { useLoans } from '@/hooks/useLoans'
 import { calculateBalanceAfterYears } from '@/services/loanCalculations'
-import { calculateFutureValue } from '@/services/calculations'
+import { calculateFutureValue, calculateCurrentValue } from '@/services/calculations'
 import { Investment } from '@/types'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -23,7 +23,7 @@ export function EquitySummary({ selectedYear, investments }: EquitySummaryProps)
 
   // Calculate total projected asset value for ALL investments
   const totalCurrentAssetValue = investments.reduce(
-    (sum, inv) => sum + inv.currentValue,
+    (sum, inv) => sum + calculateCurrentValue(inv),
     0
   )
 
@@ -137,7 +137,7 @@ export function EquitySummary({ selectedYear, investments }: EquitySummaryProps)
           <CardContent>
             <div className="space-y-3">
               {Object.entries(investmentsByType).map(([type, invs]) => {
-                const currentValue = invs.reduce((sum, inv) => sum + inv.currentValue, 0)
+                const currentValue = invs.reduce((sum, inv) => sum + calculateCurrentValue(inv), 0)
                 const projectedValue = invs.reduce(
                   (sum, inv) => sum + calculateFutureValue(inv, selectedYear),
                   0

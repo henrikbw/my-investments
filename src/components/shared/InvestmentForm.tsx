@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Investment, InvestmentType } from '@/types'
 import { DEFAULT_ROI } from '@/constants/defaults'
 
@@ -33,6 +34,11 @@ interface InvestmentFormProps {
   initialData?: Investment
 }
 
+type InvestmentFormData = Partial<Investment> & {
+  lastKnownValue?: number
+  lastKnownDate?: string
+}
+
 export function InvestmentForm({
   open,
   onClose,
@@ -40,7 +46,7 @@ export function InvestmentForm({
   type,
   initialData,
 }: InvestmentFormProps) {
-  const [formData, setFormData] = useState<Partial<Investment>>({
+  const [formData, setFormData] = useState<InvestmentFormData>({
     type,
     name: '',
     amountInvested: 0,
@@ -48,11 +54,20 @@ export function InvestmentForm({
     expectedAnnualROI: DEFAULT_ROI[type],
     purchaseDate: new Date().toISOString().split('T')[0],
     notes: '',
+    lastKnownValue: undefined,
+    lastKnownDate: undefined,
   })
+
+  // Track whether the "last known value" section is expanded
+  const [showLastKnownValue, setShowLastKnownValue] = useState(false)
 
   useEffect(() => {
     if (initialData) {
       setFormData(initialData)
+      // Expand the section if editing an investment with lastKnownValue
+      setShowLastKnownValue(
+        initialData.lastKnownValue !== undefined && initialData.lastKnownValue > 0
+      )
     } else {
       setFormData({
         type,
@@ -62,18 +77,57 @@ export function InvestmentForm({
         expectedAnnualROI: DEFAULT_ROI[type],
         purchaseDate: new Date().toISOString().split('T')[0],
         notes: '',
+        lastKnownValue: undefined,
+        lastKnownDate: undefined,
       })
+      setShowLastKnownValue(false)
     }
   }, [initialData, type, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
+
+    // Prepare submission data
+    const submissionData = { ...formData }
+
+    // If lastKnownValue section is hidden, clear those fields
+    if (!showLastKnownValue) {
+      submissionData.lastKnownValue = undefined
+      submissionData.lastKnownDate = undefined
+    }
+
+    // Set currentValue for backwards compatibility
+    // Use lastKnownValue if available, otherwise amountInvested
+    if (submissionData.lastKnownValue && submissionData.lastKnownValue > 0) {
+      submissionData.currentValue = submissionData.lastKnownValue
+    } else {
+      submissionData.currentValue = submissionData.amountInvested || 0
+    }
+
+    onSubmit(submissionData)
     onClose()
   }
 
-  const updateField = (field: string, value: string | number) => {
+  const updateField = (field: string, value: string | number | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleLastKnownToggle = (checked: boolean) => {
+    setShowLastKnownValue(checked)
+    if (!checked) {
+      // Clear the fields when unchecking
+      setFormData((prev) => ({
+        ...prev,
+        lastKnownValue: undefined,
+        lastKnownDate: undefined,
+      }))
+    } else if (!formData.lastKnownDate) {
+      // Set default date to today when enabling
+      setFormData((prev) => ({
+        ...prev,
+        lastKnownDate: new Date().toISOString().split('T')[0],
+      }))
+    }
   }
 
   return (
@@ -207,21 +261,6 @@ export function InvestmentForm({
           </div>
 
           <div>
-            <Label htmlFor="currentValue">Current Value *</Label>
-            <Input
-              id="currentValue"
-              type="number"
-              step="0.01"
-              value={formData.currentValue}
-              onChange={(e) =>
-                updateField('currentValue', parseFloat(e.target.value) || 0)
-              }
-              placeholder="0.00"
-              required
-            />
-          </div>
-
-          <div>
             <Label htmlFor="expectedAnnualROI">Expected Annual ROI (%) *</Label>
             <Input
               id="expectedAnnualROI"
@@ -245,6 +284,59 @@ export function InvestmentForm({
               onChange={(e) => updateField('purchaseDate', e.target.value)}
               required
             />
+          </div>
+
+          {/* Last Known Value Section */}
+          <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="showLastKnownValue"
+                checked={showLastKnownValue}
+                onCheckedChange={handleLastKnownToggle}
+              />
+              <Label
+                htmlFor="showLastKnownValue"
+                className="text-sm font-medium cursor-pointer"
+              >
+                Override with known value
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Use this if you know a more recent value for this investment.
+              Projections will be calculated from this value instead.
+            </p>
+
+            {showLastKnownValue && (
+              <div className="space-y-3 pt-2 border-t">
+                <div>
+                  <Label htmlFor="lastKnownValue">Last Known Value *</Label>
+                  <Input
+                    id="lastKnownValue"
+                    type="number"
+                    step="0.01"
+                    value={formData.lastKnownValue || ''}
+                    onChange={(e) =>
+                      updateField(
+                        'lastKnownValue',
+                        e.target.value ? parseFloat(e.target.value) : undefined
+                      )
+                    }
+                    placeholder="0.00"
+                    required={showLastKnownValue}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastKnownDate">Value Date *</Label>
+                  <Input
+                    id="lastKnownDate"
+                    type="date"
+                    value={formData.lastKnownDate || ''}
+                    onChange={(e) => updateField('lastKnownDate', e.target.value)}
+                    required={showLastKnownValue}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
