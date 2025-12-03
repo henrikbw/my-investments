@@ -5,7 +5,7 @@
 import { useMemo } from 'react'
 import { usePortfolio } from './usePortfolio'
 import { Loan, LoanType, Investment, EquityData } from '@/types'
-import { getMonthlyInstallment } from '@/services/loanCalculations'
+import { getMonthlyInstallment, calculateCurrentBalance } from '@/services/loanCalculations'
 import { calculateCurrentValue } from '@/services/calculations'
 
 export function useLoans() {
@@ -29,9 +29,9 @@ export function useLoans() {
     [loans]
   )
 
-  // Calculate total loan balance
+  // Calculate total loan balance (auto-calculated based on time elapsed)
   const totalLoanBalance = useMemo(
-    () => loans.reduce((sum, loan) => sum + loan.remainingBalance, 0),
+    () => loans.reduce((sum, loan) => sum + calculateCurrentBalance(loan), 0),
     [loans]
   )
 
@@ -52,8 +52,8 @@ export function useLoans() {
     return Array.from(assetIds).map((assetId) => {
       const asset = state.investments.find((inv) => inv.id === assetId)
       const linkedLoans = loans.filter((loan) => loan.linkedAssetId === assetId)
-      const totalLoanBalance = linkedLoans.reduce(
-        (sum, loan) => sum + loan.remainingBalance,
+      const linkedLoansBalance = linkedLoans.reduce(
+        (sum, loan) => sum + calculateCurrentBalance(loan),
         0
       )
       const assetValue = asset ? calculateCurrentValue(asset) : 0
@@ -65,13 +65,13 @@ export function useLoans() {
         linkedLoans: linkedLoans.map((loan) => ({
           loanId: loan.id,
           loanName: loan.name,
-          remainingBalance: loan.remainingBalance,
+          remainingBalance: calculateCurrentBalance(loan),
         })),
-        totalLoanBalance,
-        equity: assetValue - totalLoanBalance,
+        totalLoanBalance: linkedLoansBalance,
+        equity: assetValue - linkedLoansBalance,
         equityPercentage:
           assetValue > 0
-            ? ((assetValue - totalLoanBalance) / assetValue) * 100
+            ? ((assetValue - linkedLoansBalance) / assetValue) * 100
             : 0,
       }
     })
