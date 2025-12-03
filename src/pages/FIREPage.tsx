@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   LineChart,
   Line,
@@ -505,11 +506,25 @@ export function FIREPage() {
             Track your path to Financial Independence
           </p>
         </div>
-        <FIRESettingsDialog
-          settings={settings}
-          onUpdate={updateSettings}
-          onReset={resetSettings}
-        />
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="refinancing"
+              checked={settings.refinancingEnabled}
+              onCheckedChange={(checked: boolean) =>
+                updateSettings({ refinancingEnabled: checked })
+              }
+            />
+            <Label htmlFor="refinancing" className="text-sm cursor-pointer">
+              Refinancing
+            </Label>
+          </div>
+          <FIRESettingsDialog
+            settings={settings}
+            onUpdate={updateSettings}
+            onReset={resetSettings}
+          />
+        </div>
       </div>
 
       {!hasData ? (

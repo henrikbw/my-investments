@@ -12,7 +12,15 @@ import {
   DEFAULT_FIRE_SETTINGS,
 } from '@/types'
 import { calculateFutureValue, calculateCurrentValue } from './calculations'
-import { generateAmortizationSchedule } from './loanCalculations'
+import {
+  generateAmortizationSchedule,
+  calculateAnnuityMonthlyPayment,
+} from './loanCalculations'
+
+/**
+ * Refinancing term in months (30 years)
+ */
+const REFINANCING_TERM_MONTHS = 360
 
 /**
  * Calculate monthly passive income from a single investment
@@ -103,13 +111,87 @@ export function calculateCurrentLoanPayment(
 }
 
 /**
- * Calculate loan payment at a specific month from now
+ * Calculate the remaining balance of a loan at a given month from now
  */
-export function calculateLoanPaymentAtMonth(
+function getLoanBalanceAtMonth(
+  loan: Loan,
+  monthsFromNow: number,
+  interestRateOverride?: number | null
+): number {
+  const schedule = generateAmortizationSchedule(loan, interestRateOverride)
+  const startDate = new Date(loan.startDate)
+  const now = new Date()
+
+  const currentMonthsPassed = Math.max(
+    0,
+    Math.floor(
+      (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+    )
+  )
+
+  const targetMonth = currentMonthsPassed + monthsFromNow
+
+  // If loan hasn't started yet, return full amount
+  if (targetMonth <= 0) return loan.loanAmount
+
+  // If loan is paid off, return 0
+  if (targetMonth >= loan.termMonths) return 0
+
+  // Get balance at target month (using month - 1 as schedule is 0-indexed after first payment)
+  return schedule[Math.min(targetMonth - 1, schedule.length - 1)]?.remainingBalance ?? 0
+}
+
+/**
+ * Calculate refinanced loan payment based on remaining balance
+ * Uses the remaining balance at the given point in time with a new 30-year term
+ */
+function calculateRefinancedPayment(
   loan: Loan,
   monthsFromNow: number,
   interestRateOverride?: number | null
 ): { total: number; interest: number; principal: number } {
+  const effectiveRate = interestRateOverride ?? loan.interestRate
+  const remainingBalance = getLoanBalanceAtMonth(loan, monthsFromNow, interestRateOverride)
+
+  // If loan is paid off, return 0
+  if (remainingBalance <= 0) {
+    return { total: 0, interest: 0, principal: 0 }
+  }
+
+  // Calculate new monthly payment with 30-year refinancing term
+  const monthlyPayment = calculateAnnuityMonthlyPayment(
+    remainingBalance,
+    effectiveRate,
+    REFINANCING_TERM_MONTHS
+  )
+
+  // Calculate interest and principal portions
+  const monthlyRate = effectiveRate / 100 / 12
+  const interest = remainingBalance * monthlyRate
+  const principal = monthlyPayment - interest
+
+  return {
+    total: monthlyPayment,
+    interest,
+    principal,
+  }
+}
+
+/**
+ * Calculate loan payment at a specific month from now
+ * If refinancing is enabled and loan is marked as refinanceable, use refinanced calculation
+ */
+export function calculateLoanPaymentAtMonth(
+  loan: Loan,
+  monthsFromNow: number,
+  interestRateOverride?: number | null,
+  useRefinancing: boolean = false
+): { total: number; interest: number; principal: number } {
+  // If refinancing is enabled and loan can be refinanced, use refinanced calculation
+  if (useRefinancing && loan.canBeRefinanced) {
+    return calculateRefinancedPayment(loan, monthsFromNow, interestRateOverride)
+  }
+
   const schedule = generateAmortizationSchedule(loan, interestRateOverride)
   const startDate = new Date(loan.startDate)
   const now = new Date()
@@ -151,11 +233,17 @@ export function calculateLoanPaymentAtMonth(
 function calculateTotalLoanExpenses(
   loans: Loan[],
   monthsFromNow: number = 0,
-  interestRateOverride?: number | null
+  interestRateOverride?: number | null,
+  useRefinancing: boolean = false
 ): { total: number; interest: number; principal: number } {
   return loans.reduce(
     (acc, loan) => {
-      const payment = calculateLoanPaymentAtMonth(loan, monthsFromNow, interestRateOverride)
+      const payment = calculateLoanPaymentAtMonth(
+        loan,
+        monthsFromNow,
+        interestRateOverride,
+        useRefinancing
+      )
       return {
         total: acc.total + payment.total,
         interest: acc.interest + payment.interest,
@@ -260,11 +348,17 @@ export function prepareFIREChartData(
   const currentYear = new Date().getFullYear()
   const data: FIREChartDataPoint[] = []
   const requiredExpenses = settings.monthlyRequiredExpenses
+  const useRefinancing = settings.refinancingEnabled
 
   for (let year = 0; year <= maxYears; year++) {
     const monthsFromNow = year * 12
     const income = calculateTotalMonthlyIncomeAtYear(investments, year, settings)
-    const loanExpenses = calculateTotalLoanExpenses(loans, monthsFromNow, settings.interestRateOverride)
+    const loanExpenses = calculateTotalLoanExpenses(
+      loans,
+      monthsFromNow,
+      settings.interestRateOverride,
+      useRefinancing
+    )
     const netWorth = calculateNetWorth(investments, loans, year)
     const totalExpenses = loanExpenses.total + requiredExpenses
 
@@ -297,8 +391,14 @@ export function calculateFIRESummary(
   loans: Loan[],
   settings: FIRESettings = DEFAULT_FIRE_SETTINGS
 ): FIRESummary {
+  const useRefinancing = settings.refinancingEnabled
   const currentIncome = calculateTotalMonthlyIncomeAtYear(investments, 0, settings)
-  const loanExpenses = calculateTotalLoanExpenses(loans, 0, settings.interestRateOverride)
+  const loanExpenses = calculateTotalLoanExpenses(
+    loans,
+    0,
+    settings.interestRateOverride,
+    useRefinancing
+  )
   const currentNetWorth = calculateNetWorth(investments, loans, 0)
   const requiredExpenses = settings.monthlyRequiredExpenses
   const totalExpenses = loanExpenses.total + requiredExpenses
@@ -323,7 +423,12 @@ export function calculateFIRESummary(
     for (let year = 1; year <= 50; year++) {
       const monthsFromNow = year * 12
       const projectedIncome = calculateTotalMonthlyIncomeAtYear(investments, year, settings)
-      const projectedLoanExpenses = calculateTotalLoanExpenses(loans, monthsFromNow, settings.interestRateOverride)
+      const projectedLoanExpenses = calculateTotalLoanExpenses(
+        loans,
+        monthsFromNow,
+        settings.interestRateOverride,
+        useRefinancing
+      )
       const projectedTotalExpenses = projectedLoanExpenses.total + requiredExpenses
 
       if (projectedIncome.total >= projectedTotalExpenses) {
