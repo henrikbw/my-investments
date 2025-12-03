@@ -16,6 +16,7 @@ export interface BaseLoan {
   termMonths: number          // Total loan term in months
   repaymentType: RepaymentType // Annuity or serial loan
   linkedAssetId?: string      // Optional link to an investment/asset
+  canBeRefinanced?: boolean   // Whether this loan can be refinanced for FIRE calculations
   notes?: string
   createdAt: string
   updatedAt: string

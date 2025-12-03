@@ -33,6 +33,8 @@ export interface FIRESettings {
   interestRateOverride: number | null
   /** Annual percentage increase for rental income */
   rentalIncomeYearlyIncrease: number
+  /** Whether to apply refinancing calculations to eligible loans */
+  refinancingEnabled: boolean
 }
 
 /**
@@ -43,6 +45,7 @@ export const DEFAULT_FIRE_SETTINGS: FIRESettings = {
   passiveIncomeRates: { ...DEFAULT_PASSIVE_INCOME_RATES },
   interestRateOverride: null,
   rentalIncomeYearlyIncrease: 2, // 2% annual increase in rental income
+  refinancingEnabled: false,
 }
 
 /**

@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Loan, LoanType, Investment, RepaymentType } from '@/types'
 import { DEFAULT_INTEREST_RATE, LOAN_LABELS } from '@/constants/defaults'
 import { calculateCurrentBalance } from '@/services/loanCalculations'
@@ -53,6 +54,7 @@ export function LoanForm({
     termMonths: 360, // 30 years default for mortgage
     repaymentType: 'annuity',
     linkedAssetId: undefined,
+    canBeRefinanced: false,
     notes: '',
   })
 
@@ -70,6 +72,7 @@ export function LoanForm({
         termMonths: type === 'mortgage' ? 360 : type === 'car' ? 60 : 120,
         repaymentType: 'annuity',
         linkedAssetId: undefined,
+        canBeRefinanced: false,
         notes: '',
       })
     }
@@ -94,7 +97,7 @@ export function LoanForm({
     onClose()
   }
 
-  const updateField = (field: string, value: string | number | undefined) => {
+  const updateField = (field: string, value: string | number | boolean | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -191,6 +194,27 @@ export function LoanForm({
                 ? 'Same total payment each month'
                 : 'Same principal payment, decreasing interest'}
             </p>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="canBeRefinanced"
+              checked={formData.canBeRefinanced ?? false}
+              onCheckedChange={(checked) =>
+                updateField('canBeRefinanced', checked === true)
+              }
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label
+                htmlFor="canBeRefinanced"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Can be refinanced
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Include in FIRE refinancing calculations
+              </p>
+            </div>
           </div>
 
           {linkableAssets.length > 0 && (
