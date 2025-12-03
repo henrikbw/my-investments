@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PortfolioSummary as PortfolioSummaryType, ProjectionWithBreakdown, Loan } from '@/types'
 import { formatCurrency, formatPercentage } from '@/utils/format'
 import { calculateFutureValue } from '@/services/calculations'
-import { calculateBalanceAfterYears } from '@/services/loanCalculations'
+import { calculateBalanceAfterYears, calculateCurrentBalance } from '@/services/loanCalculations'
 import { Investment } from '@/types'
 
 interface PortfolioSummaryProps {
@@ -20,8 +20,8 @@ interface PortfolioSummaryProps {
 export function PortfolioSummary({ summary, selectedProjection, investments, loans }: PortfolioSummaryProps) {
   const selectedYear = selectedProjection?.year ?? 0
 
-  // Calculate net worth values
-  const totalLoanBalance = loans.reduce((sum, loan) => sum + loan.remainingBalance, 0)
+  // Calculate net worth values (using auto-calculated current balance)
+  const totalLoanBalance = loans.reduce((sum, loan) => sum + calculateCurrentBalance(loan), 0)
   const currentNetWorth = summary.totalValue - totalLoanBalance
 
   // Calculate projected values for net worth

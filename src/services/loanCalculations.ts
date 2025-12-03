@@ -207,7 +207,7 @@ export function getCurrentMonthlyPayment(loan: Loan): number {
       loan.termMonths
     )
     const monthlyRate = loan.interestRate / 100 / 12
-    const currentBalance = loan.remainingBalance
+    const currentBalance = calculateCurrentBalance(loan)
     const interest = currentBalance * monthlyRate
     return monthlyPrincipal + interest
   }
@@ -225,7 +225,8 @@ export function getMonthlyInstallment(loan: Loan): number {
       loan.interestRate,
       loan.termMonths
     )
-    const interest = loan.remainingBalance * monthlyRate
+    const currentBalance = calculateCurrentBalance(loan)
+    const interest = currentBalance * monthlyRate
     return monthlyPayment - interest
   } else {
     // For serial, principal is constant

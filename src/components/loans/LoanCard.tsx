@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { LOAN_COLORS, LOAN_LABELS } from '@/constants/defaults'
 import { formatCurrency, formatPercentage } from '@/utils/format'
-import { getCurrentMonthlyPayment, getMonthlyInstallment } from '@/services/loanCalculations'
+import { getCurrentMonthlyPayment, getMonthlyInstallment, calculateCurrentBalance } from '@/services/loanCalculations'
 import { calculateCurrentValue } from '@/services/calculations'
 
 interface LoanCardProps {
@@ -21,12 +21,15 @@ interface LoanCardProps {
 export function LoanCard({ loan, linkedAsset, onEdit, onDelete }: LoanCardProps) {
   const monthlyPayment = getCurrentMonthlyPayment(loan)
   const monthlyInstallment = getMonthlyInstallment(loan)
-  const paidOff = loan.loanAmount - loan.remainingBalance
+
+  // Calculate current balance based on time elapsed since loan start
+  const currentBalance = calculateCurrentBalance(loan)
+  const paidOff = loan.loanAmount - currentBalance
   const paidOffPercentage = (paidOff / loan.loanAmount) * 100
 
   // Calculate equity if linked to an asset
   const linkedAssetValue = linkedAsset ? calculateCurrentValue(linkedAsset) : 0
-  const equity = linkedAsset ? linkedAssetValue - loan.remainingBalance : null
+  const equity = linkedAsset ? linkedAssetValue - currentBalance : null
   const equityPercentage = linkedAsset && linkedAssetValue > 0
     ? (equity! / linkedAssetValue) * 100
     : null
@@ -67,7 +70,7 @@ export function LoanCard({ loan, linkedAsset, onEdit, onDelete }: LoanCardProps)
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Remaining Balance:</span>
-            <span className="font-medium">{formatCurrency(loan.remainingBalance)}</span>
+            <span className="font-medium">{formatCurrency(currentBalance)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Original Amount:</span>
