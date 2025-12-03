@@ -314,9 +314,7 @@ function FIRESettingsDialog({ settings, onUpdate, onReset }: FIRESettingsDialogP
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          Settings
-        </Button>
+        <Button>Settings</Button>
       </DialogTrigger>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -487,12 +485,8 @@ export function FIREPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">FIRE Journey</h1>
-        <div className="animate-pulse space-y-4">
-          <div className="h-32 bg-muted rounded-lg" />
-          <div className="h-[400px] bg-muted rounded-lg" />
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Loading...</p>
       </div>
     )
   }
@@ -503,11 +497,11 @@ export function FIREPage() {
   )
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6 flex items-start justify-between">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">FIRE Journey</h1>
-          <p className="text-muted-foreground mt-1">
+          <h2 className="text-3xl font-bold mb-2">FIRE Journey</h2>
+          <p className="text-muted-foreground">
             Track your path to Financial Independence
           </p>
         </div>
