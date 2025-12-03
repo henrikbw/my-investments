@@ -20,6 +20,7 @@ import {
   calculateTotalInvested,
   calculateTotalGain,
   calculatePercentageGain,
+  calculateCurrentValue,
 } from './calculations'
 import { calculateBalanceAfterYears } from './loanCalculations'
 import { PROJECTION_YEARS, MODULE_COLORS } from '@/constants/defaults'
@@ -30,13 +31,14 @@ import { PROJECTION_YEARS, MODULE_COLORS } from '@/constants/defaults'
 export function generateInvestmentProjections(
   investment: Investment
 ): InvestmentProjection {
+  const currentValue = calculateCurrentValue(investment)
   const projections: Projection[] = PROJECTION_YEARS.map((year) => {
     const futureValue = calculateFutureValue(investment, year)
-    const totalGain = futureValue - investment.currentValue
+    const totalGain = futureValue - currentValue
     const percentageGain =
-      investment.currentValue === 0
+      currentValue === 0
         ? 0
-        : (totalGain / investment.currentValue) * 100
+        : (totalGain / currentValue) * 100
 
     return {
       year,
@@ -175,7 +177,7 @@ export function calculateAllocation(
   // Calculate allocation for each type
   const allocation: AllocationData[] = Object.entries(typeGroups).map(
     ([type, invs]) => {
-      const value = invs.reduce((sum, inv) => sum + inv.currentValue, 0)
+      const value = invs.reduce((sum, inv) => sum + calculateCurrentValue(inv), 0)
       const percentage = totalValue === 0 ? 0 : (value / totalValue) * 100
 
       return {
@@ -333,7 +335,7 @@ export function prepareAllocationChartData(
       .map((inv) => ({
         id: inv.id,
         name: inv.name,
-        value: years === 0 ? inv.currentValue : calculateFutureValue(inv, years),
+        value: years === 0 ? calculateCurrentValue(inv) : calculateFutureValue(inv, years),
       }))
       .sort((a, b) => b.value - a.value)
       .slice(0, MAX_INVESTMENTS_IN_TOOLTIP)
@@ -372,10 +374,11 @@ export function prepareIndividualProjections(
   maxYears: number = 20
 ): IndividualProjectionData[] {
   return investments.map((inv) => {
+    const currentValue = calculateCurrentValue(inv)
     const projectedValue = calculateFutureValue(inv, maxYears)
-    const totalGain = projectedValue - inv.currentValue
+    const totalGain = projectedValue - currentValue
     const percentageGain =
-      inv.currentValue === 0 ? 0 : (totalGain / inv.currentValue) * 100
+      currentValue === 0 ? 0 : (totalGain / currentValue) * 100
 
     // Generate chart data points for mini chart
     const chartData: Array<{ year: number; value: number }> = []
@@ -390,7 +393,7 @@ export function prepareIndividualProjections(
       id: inv.id,
       name: inv.name,
       type: inv.type,
-      currentValue: inv.currentValue,
+      currentValue: currentValue,
       projectedValue: Math.round(projectedValue * 100) / 100,
       totalGain: Math.round(totalGain * 100) / 100,
       percentageGain: Math.round(percentageGain * 100) / 100,

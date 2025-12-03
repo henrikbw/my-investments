@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { LOAN_COLORS, LOAN_LABELS } from '@/constants/defaults'
 import { formatCurrency, formatPercentage } from '@/utils/format'
 import { getCurrentMonthlyPayment, getMonthlyInstallment } from '@/services/loanCalculations'
+import { calculateCurrentValue } from '@/services/calculations'
 
 interface LoanCardProps {
   loan: Loan
@@ -24,9 +25,10 @@ export function LoanCard({ loan, linkedAsset, onEdit, onDelete }: LoanCardProps)
   const paidOffPercentage = (paidOff / loan.loanAmount) * 100
 
   // Calculate equity if linked to an asset
-  const equity = linkedAsset ? linkedAsset.currentValue - loan.remainingBalance : null
-  const equityPercentage = linkedAsset && linkedAsset.currentValue > 0
-    ? (equity! / linkedAsset.currentValue) * 100
+  const linkedAssetValue = linkedAsset ? calculateCurrentValue(linkedAsset) : 0
+  const equity = linkedAsset ? linkedAssetValue - loan.remainingBalance : null
+  const equityPercentage = linkedAsset && linkedAssetValue > 0
+    ? (equity! / linkedAssetValue) * 100
     : null
 
   // Calculate remaining months
@@ -105,7 +107,7 @@ export function LoanCard({ loan, linkedAsset, onEdit, onDelete }: LoanCardProps)
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Asset Value:</span>
-                  <span>{formatCurrency(linkedAsset.currentValue)}</span>
+                  <span>{formatCurrency(linkedAssetValue)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Equity:</span>

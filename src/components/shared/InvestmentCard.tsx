@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MODULE_COLORS, MODULE_LABELS } from '@/constants/defaults'
 import { formatCurrency, formatPercentage } from '@/utils/format'
+import { calculateCurrentValue, calculateTotalContributions } from '@/services/calculations'
 
 interface InvestmentCardProps {
   investment: Investment
@@ -16,8 +17,11 @@ interface InvestmentCardProps {
 }
 
 export function InvestmentCard({ investment, onEdit, onDelete }: InvestmentCardProps) {
-  const gain = investment.currentValue - investment.amountInvested
-  const gainPercentage = (gain / investment.amountInvested) * 100
+  const currentValue = calculateCurrentValue(investment)
+  const totalContributions = calculateTotalContributions(investment, investment.purchaseDate)
+  const totalInvested = investment.amountInvested + totalContributions
+  const gain = currentValue - totalInvested
+  const gainPercentage = totalInvested > 0 ? (gain / totalInvested) * 100 : 0
   const isPositive = gain >= 0
 
   return (
@@ -41,11 +45,11 @@ export function InvestmentCard({ investment, onEdit, onDelete }: InvestmentCardP
         <div className="space-y-2 mb-4">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Current Value:</span>
-            <span className="font-medium">{formatCurrency(investment.currentValue)}</span>
+            <span className="font-medium">{formatCurrency(currentValue)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Invested:</span>
-            <span>{formatCurrency(investment.amountInvested)}</span>
+            <span>{formatCurrency(totalInvested)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Gain/Loss:</span>

@@ -6,6 +6,7 @@ import { useMemo } from 'react'
 import { usePortfolio } from './usePortfolio'
 import { Loan, LoanType, Investment, EquityData } from '@/types'
 import { getMonthlyInstallment } from '@/services/loanCalculations'
+import { calculateCurrentValue } from '@/services/calculations'
 
 export function useLoans() {
   const { state, addLoan, updateLoan, deleteLoan } = usePortfolio()
@@ -55,21 +56,22 @@ export function useLoans() {
         (sum, loan) => sum + loan.remainingBalance,
         0
       )
+      const assetValue = asset ? calculateCurrentValue(asset) : 0
 
       return {
         assetId,
         assetName: asset?.name ?? 'Unknown Asset',
-        assetValue: asset?.currentValue ?? 0,
+        assetValue,
         linkedLoans: linkedLoans.map((loan) => ({
           loanId: loan.id,
           loanName: loan.name,
           remainingBalance: loan.remainingBalance,
         })),
         totalLoanBalance,
-        equity: (asset?.currentValue ?? 0) - totalLoanBalance,
+        equity: assetValue - totalLoanBalance,
         equityPercentage:
-          asset?.currentValue && asset.currentValue > 0
-            ? ((asset.currentValue - totalLoanBalance) / asset.currentValue) * 100
+          assetValue > 0
+            ? ((assetValue - totalLoanBalance) / assetValue) * 100
             : 0,
       }
     })
@@ -78,7 +80,7 @@ export function useLoans() {
   // Calculate total equity (ALL assets - ALL loans)
   const totalEquity = useMemo(() => {
     const totalAssetValue = state.investments.reduce(
-      (sum, inv) => sum + inv.currentValue,
+      (sum, inv) => sum + calculateCurrentValue(inv),
       0
     )
     return totalAssetValue - totalLoanBalance

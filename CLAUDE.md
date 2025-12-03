@@ -162,13 +162,26 @@ my-investments/
 ```typescript
 type InvestmentType = 'stock' | 'fund' | 'real-estate' | 'crypto'
 
+/**
+ * Base investment interface with support for auto-calculated current values.
+ *
+ * Value Calculation Logic:
+ * - If `lastKnownValue` + `lastKnownDate` are set:
+ *   ROI is calculated from `lastKnownValue` starting at `lastKnownDate`
+ * - If not set:
+ *   ROI is calculated from `amountInvested` starting at `purchaseDate`
+ * - For funds with monthly contributions:
+ *   Contributions are added from `purchaseDate` (or `lastKnownDate` if override is set)
+ */
 interface BaseInvestment {
   id: string
   name: string
   amountInvested: number
-  currentValue: number
-  expectedAnnualROI: number  // e.g., 7 for 7%
-  purchaseDate: string       // ISO date string
+  currentValue: number        // @deprecated - use calculateCurrentValue() instead
+  expectedAnnualROI: number   // e.g., 7 for 7%
+  purchaseDate: string        // ISO date string
+  lastKnownValue?: number     // Optional: overrides amountInvested for ROI calculation
+  lastKnownDate?: string      // Optional: date when lastKnownValue was recorded
   notes?: string
   createdAt: string
   updatedAt: string
@@ -430,3 +443,37 @@ Where:
 - Currency assumed to be user's local currency (no conversion in MVP)
 - ROI calculations use compound interest, compounded annually
 - Monthly contributions compounded monthly within the annual calculation
+
+---
+
+## Auto-Calculated Investment Values
+
+Investment values are automatically calculated based on time elapsed and expected ROI. This creates a "set and forget" experience where the dashboard stays accurate over time without constant manual updates.
+
+### How It Works
+
+1. **Default behavior**: Current value = `amountInvested` compounded from `purchaseDate` to today
+2. **With override**: Current value = `lastKnownValue` compounded from `lastKnownDate` to today
+3. **Funds with contributions**: Monthly contributions are also compounded from their start date
+
+### Key Functions
+
+- `calculateCurrentValue(investment)` - Returns the auto-calculated current value
+- `calculateFutureValue(investment, years)` - Projects value N years into the future
+- `calculateTotalContributions(investment, startDate)` - Calculates total monthly contributions made
+
+### Example
+
+```typescript
+// Investment purchased Jan 2023 for $10,000 at 8% ROI
+// Today is Dec 2025 (~2.93 years elapsed)
+// Auto-calculated value: $10,000 × (1.08)^2.93 ≈ $12,523
+```
+
+### Override with Last Known Value
+
+Users can optionally set a "last known value" when they want to correct for actual market performance vs expected ROI:
+
+- Check "Override with known value" in the investment form
+- Enter the actual value and the date it was recorded
+- Future projections will calculate from this value instead
