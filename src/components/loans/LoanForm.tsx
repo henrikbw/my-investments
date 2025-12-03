@@ -78,18 +78,14 @@ export function LoanForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Calculate remaining balance based on current date if not editing
-    let remainingBalance = formData.remainingBalance
-    if (!initialData && formData.loanAmount && formData.loanAmount > 0) {
-      // For new loans, calculate the current remaining balance
-      const tempLoan = {
-        ...formData,
-        id: 'temp',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } as Loan
-      remainingBalance = calculateCurrentBalance(tempLoan)
-    }
+    // Always calculate remaining balance based on amortization schedule
+    const tempLoan = {
+      ...formData,
+      id: initialData?.id || 'temp',
+      createdAt: initialData?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as Loan
+    const remainingBalance = calculateCurrentBalance(tempLoan)
 
     onSubmit({
       ...formData,
@@ -100,15 +96,6 @@ export function LoanForm({
 
   const updateField = (field: string, value: string | number | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  // When loan amount changes, update remaining balance if it's a new loan
-  const handleLoanAmountChange = (value: number) => {
-    updateField('loanAmount', value)
-    if (!initialData) {
-      // For new loans, set remaining balance to loan amount initially
-      updateField('remainingBalance', value)
-    }
   }
 
   return (
@@ -138,20 +125,7 @@ export function LoanForm({
               type="number"
               step="0.01"
               value={formData.loanAmount}
-              onChange={(e) => handleLoanAmountChange(parseFloat(e.target.value) || 0)}
-              placeholder="0.00"
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="remainingBalance">Current Remaining Balance *</Label>
-            <Input
-              id="remainingBalance"
-              type="number"
-              step="0.01"
-              value={formData.remainingBalance}
-              onChange={(e) => updateField('remainingBalance', parseFloat(e.target.value) || 0)}
+              onChange={(e) => updateField('loanAmount', parseFloat(e.target.value) || 0)}
               placeholder="0.00"
               required
             />
