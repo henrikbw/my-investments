@@ -83,8 +83,6 @@ npx shadcn@latest add [component-name]  # Add shadcn/ui component
 | Type definitions, interfaces | `typescript-pro` | `src/types/**` |
 | Financial calculations, projections | `data-analyst` | `src/services/calculations.ts`, `src/utils/finance.ts` |
 | Styling, UX, accessibility | `ui-designer` | `src/index.css`, component styling |
-| Codebase exploration | `Explore` | — |
-| Multi-step planning | `Plan` | — |
 
 ### Delegation Patterns
 
@@ -101,8 +99,6 @@ npx shadcn@latest add [component-name]  # Add shadcn/ui component
 → Step 2: data-analyst implements logic
 → Step 3: react-specialist builds UI
 ```
-
-**Always explore before major changes**: Use `Explore` agent first.
 
 ### When NOT to Delegate
 
