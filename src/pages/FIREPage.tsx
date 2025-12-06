@@ -511,12 +511,11 @@ export function FIREPage() {
             <Switch
               id="refinancing"
               checked={settings.refinancingEnabled}
-              disabled={settings.interestOnlyEnabled}
               onCheckedChange={(checked: boolean) =>
                 updateSettings({ refinancingEnabled: checked })
               }
             />
-            <Label htmlFor="refinancing" className={`text-sm cursor-pointer ${settings.interestOnlyEnabled ? 'text-muted-foreground' : ''}`}>
+            <Label htmlFor="refinancing" className="text-sm cursor-pointer">
               Refinancing
             </Label>
           </div>

@@ -207,8 +207,11 @@ function calculateInterestOnlyPayment(
 
 /**
  * Calculate loan payment at a specific month from now
- * If refinancing is enabled and loan is marked as refinanceable, use refinanced calculation
- * If interest-only is enabled and loan is marked as refinanceable, only pay interest
+ * Supports combinations of refinancing and interest-only modes:
+ * - Neither: Use original amortization schedule
+ * - Refinancing only: Recalculate payment with 30-year term on remaining balance
+ * - Interest-only only: Pay only interest on remaining balance (no principal)
+ * - Both: Pay only interest on remaining balance (interest-only takes effect)
  */
 export function calculateLoanPaymentAtMonth(
   loan: Loan,
@@ -218,12 +221,12 @@ export function calculateLoanPaymentAtMonth(
   useInterestOnly: boolean = false
 ): { total: number; interest: number; principal: number } {
   // If interest-only is enabled and loan can be refinanced, use interest-only calculation
-  // Interest-only takes precedence over refinancing
+  // This applies whether refinancing is also enabled or not (interest-only on remaining balance)
   if (useInterestOnly && loan.canBeRefinanced) {
     return calculateInterestOnlyPayment(loan, monthsFromNow, interestRateOverride)
   }
 
-  // If refinancing is enabled and loan can be refinanced, use refinanced calculation
+  // If only refinancing is enabled and loan can be refinanced, use refinanced calculation
   if (useRefinancing && loan.canBeRefinanced) {
     return calculateRefinancedPayment(loan, monthsFromNow, interestRateOverride)
   }
