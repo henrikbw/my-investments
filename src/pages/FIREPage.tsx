@@ -30,8 +30,15 @@ import {
   Legend,
   ReferenceLine,
 } from 'recharts'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { formatCurrency } from '@/utils/format'
-import { FIREChartDataPoint, FIRESettings, DEFAULT_FIRE_SETTINGS } from '@/types'
+import { FIREChartDataPoint, FIRESettings, DEFAULT_FIRE_SETTINGS, ContributionImpactSummary } from '@/types'
 import { MODULE_COLORS, MODULE_LABELS } from '@/constants/defaults'
 
 const FIRE_COLORS = {
@@ -290,6 +297,143 @@ interface FIRESettingsDialogProps {
   onReset: () => void
 }
 
+function ContributionImpactCard({
+  impactSummary,
+  threshold,
+  onThresholdChange,
+  isEnabled,
+}: {
+  impactSummary: ContributionImpactSummary
+  threshold: number
+  onThresholdChange: (value: number) => void
+  isEnabled: boolean
+}) {
+  if (impactSummary.totalMonthlyContributions === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Contribution Impact Analysis</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            No monthly contributions found. Add monthly contributions to funds to see impact analysis.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>Contribution Impact Analysis</span>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="threshold" className="text-sm font-normal">
+              Threshold:
+            </Label>
+            <Select
+              value={threshold.toString()}
+              onValueChange={(v) => onThresholdChange(parseFloat(v))}
+            >
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0.5">0.5%</SelectItem>
+                <SelectItem value="1">1%</SelectItem>
+                <SelectItem value="2">2%</SelectItem>
+                <SelectItem value="5">5%</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Summary message */}
+        <div className="bg-muted/50 rounded-lg p-4 text-center">
+          {impactSummary.suggestedStopYear !== null ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Your contributions become insignificant (&lt;{threshold}% of growth) in
+              </p>
+              <p className="text-2xl font-bold mt-1">
+                Year {impactSummary.suggestedStopYear} ({impactSummary.suggestedStopActualYear})
+              </p>
+            </>
+          ) : (
+            <p className="text-muted-foreground">
+              Contributions remain significant throughout the projection period
+            </p>
+          )}
+        </div>
+
+        {/* Current stats */}
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-muted-foreground">Monthly Contributions</p>
+            <p className="font-semibold">{formatCurrency(impactSummary.totalMonthlyContributions)}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Current Impact</p>
+            <p className="font-semibold">{impactSummary.currentImpactRatio.toFixed(1)}%</p>
+          </div>
+        </div>
+
+        {/* Impact if stopping */}
+        {isEnabled && impactSummary.suggestedStopYear !== null && (
+          <div className="border-t pt-4 space-y-2">
+            <p className="text-sm font-medium">
+              If contributions stop at Year {impactSummary.suggestedStopYear}:
+            </p>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">FIRE Delay</p>
+                <p
+                  className={`font-semibold ${impactSummary.fireDelayYears && impactSummary.fireDelayYears > 0 ? 'text-amber-600' : 'text-green-600'}`}
+                >
+                  {impactSummary.fireDelayYears !== null
+                    ? `+${impactSummary.fireDelayYears} years`
+                    : 'N/A'}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Portfolio Impact</p>
+                <p className="font-semibold text-amber-600">
+                  {impactSummary.portfolioDifference !== null
+                    ? formatCurrency(impactSummary.portfolioDifference)
+                    : 'N/A'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Impact ratio progression */}
+        <div className="border-t pt-4">
+          <p className="text-sm font-medium mb-2">Impact Ratio Over Time</p>
+          <div className="space-y-1 text-sm">
+            {[0, 5, 10, 15, 20].map((year) => {
+              const data = impactSummary.impactData.find((d) => d.year === year)
+              if (!data) return null
+              const isBelowThreshold = data.impactRatio < threshold
+              return (
+                <div key={year} className="flex justify-between">
+                  <span className="text-muted-foreground">Year {year}</span>
+                  <span className={isBelowThreshold ? 'text-green-600' : ''}>
+                    {data.impactRatio.toFixed(1)}%
+                    {isBelowThreshold && year === impactSummary.suggestedStopYear && ' ← Stop here'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function FIRESettingsDialog({ settings, onUpdate, onReset }: FIRESettingsDialogProps) {
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState(settings)
@@ -482,7 +626,7 @@ function FIRESettingsDialog({ settings, onUpdate, onReset }: FIRESettingsDialogP
 }
 
 export function FIREPage() {
-  const { chartData, summary, loading, hasData, settings, updateSettings, resetSettings } = useFIRE(30)
+  const { chartData, summary, contributionImpact, loading, hasData, settings, updateSettings, resetSettings } = useFIRE(30)
 
   if (loading) {
     return (
@@ -507,6 +651,18 @@ export function FIREPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="stopContributions"
+              checked={settings.stopContributionsEnabled}
+              onCheckedChange={(checked: boolean) =>
+                updateSettings({ stopContributionsEnabled: checked })
+              }
+            />
+            <Label htmlFor="stopContributions" className="text-sm cursor-pointer">
+              Stop Contributions
+            </Label>
+          </div>
           <div className="flex items-center gap-2">
             <Switch
               id="refinancing"
@@ -706,6 +862,18 @@ export function FIREPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Contribution Impact Analysis */}
+          {contributionImpact && (
+            <ContributionImpactCard
+              impactSummary={contributionImpact}
+              threshold={settings.contributionInsignificanceThreshold}
+              onThresholdChange={(value) =>
+                updateSettings({ contributionInsignificanceThreshold: value })
+              }
+              isEnabled={settings.stopContributionsEnabled}
+            />
+          )}
         </div>
       )}
     </div>
