@@ -8,18 +8,21 @@ import { usePortfolio } from './usePortfolio'
 import {
   prepareFIREChartData,
   calculateFIRESummary,
+  calculateContributionImpactSummary,
 } from '@/services/fireCalculations'
 import {
   FIREChartDataPoint,
   FIRESummary,
   FIRESettings,
   DEFAULT_FIRE_SETTINGS,
+  ContributionImpactSummary,
 } from '@/types'
 import { FIRE_SETTINGS_STORAGE_KEY } from '@/constants/defaults'
 
 interface UseFIREResult {
   chartData: FIREChartDataPoint[]
   summary: FIRESummary
+  contributionImpact: ContributionImpactSummary | null
   loading: boolean
   hasData: boolean
   settings: FIRESettings
@@ -104,9 +107,15 @@ export function useFIRE(maxYears: number = 30): UseFIREResult {
 
   const hasData = investments.length > 0 || loans.length > 0
 
+  const contributionImpact = useMemo(() => {
+    if (loading || investments.length === 0) return null
+    return calculateContributionImpactSummary(investments, loans, settings, maxYears)
+  }, [investments, loans, settings, loading, maxYears])
+
   return {
     chartData,
     summary,
+    contributionImpact,
     loading,
     hasData,
     settings,

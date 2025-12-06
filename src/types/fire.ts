@@ -37,6 +37,10 @@ export interface FIRESettings {
   refinancingEnabled: boolean
   /** Whether to pay interest only (no principal) on eligible loans */
   interestOnlyEnabled: boolean
+  /** Whether to stop contributions at the suggested year */
+  stopContributionsEnabled: boolean
+  /** Threshold percentage below which contributions are considered insignificant */
+  contributionInsignificanceThreshold: number  // Default: 1 (meaning 1%)
 }
 
 /**
@@ -49,6 +53,8 @@ export const DEFAULT_FIRE_SETTINGS: FIRESettings = {
   rentalIncomeYearlyIncrease: 2, // 2% annual increase in rental income
   refinancingEnabled: false,
   interestOnlyEnabled: false,
+  stopContributionsEnabled: false,
+  contributionInsignificanceThreshold: 1,
 }
 
 /**
@@ -97,4 +103,42 @@ export interface FIREGoal {
   safeWithdrawalRate: number    // Default 4%
   createdAt: string
   updatedAt: string
+}
+
+/**
+ * Contribution impact data for a single year
+ */
+export interface ContributionImpactData {
+  /** Year number (0 = now, 1 = next year, etc.) */
+  year: number
+  /** Actual calendar year */
+  actualYear: number
+  /** Portfolio value at start of year */
+  portfolioValue: number
+  /** Annual growth from compounding (portfolioValue * ROI) */
+  annualGrowth: number
+  /** Annual contributions (monthlyContribution * 12) */
+  annualContributions: number
+  /** Contribution impact ratio: contributions / growth * 100 */
+  impactRatio: number
+}
+
+/**
+ * Summary of contribution impact analysis
+ */
+export interface ContributionImpactSummary {
+  /** Total monthly contributions across all investments */
+  totalMonthlyContributions: number
+  /** Current contribution impact ratio */
+  currentImpactRatio: number
+  /** Year when contributions become insignificant (null if already insignificant or never) */
+  suggestedStopYear: number | null
+  /** Actual calendar year to stop */
+  suggestedStopActualYear: number | null
+  /** FIRE delay in years if stopping at suggested year */
+  fireDelayYears: number | null
+  /** Portfolio difference at FIRE date if stopping contributions */
+  portfolioDifference: number | null
+  /** Data points for charting */
+  impactData: ContributionImpactData[]
 }

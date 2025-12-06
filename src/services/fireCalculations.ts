@@ -10,8 +10,15 @@ import {
   FIRESummary,
   FIRESettings,
   DEFAULT_FIRE_SETTINGS,
+  ContributionImpactData,
+  ContributionImpactSummary,
 } from '@/types'
-import { calculateFutureValue, calculateCurrentValue } from './calculations'
+import {
+  calculateFutureValue,
+  calculateCurrentValue,
+  calculateWithMonthlyContributions,
+  calculateCompoundInterest,
+} from './calculations'
 import {
   generateAmortizationSchedule,
   calculateAnnuityMonthlyPayment,
@@ -507,5 +514,185 @@ export function calculateFIRESummary(
     fiDate,
     fiProgress: Math.round(fiProgress * 100) / 100,
     isFinanciallyIndependent,
+  }
+}
+
+/**
+ * Calculate total monthly contributions across all investments
+ * Currently only funds have monthly contributions
+ */
+export function calculateTotalMonthlyContributions(investments: Investment[]): number {
+  return investments.reduce((total, inv) => {
+    if (inv.type === 'fund' && inv.monthlyContribution > 0) {
+      return total + inv.monthlyContribution
+    }
+    return total
+  }, 0)
+}
+
+/**
+ * Calculate the contribution impact ratio at a specific year
+ * Impact = (Annual Contributions / Annual Growth) * 100
+ */
+export function calculateContributionImpactAtYear(
+  investments: Investment[],
+  year: number
+): ContributionImpactData {
+  const currentYear = new Date().getFullYear()
+
+  // Get portfolio value and calculate impact for investments with contributions
+  let portfolioValue = 0
+  let annualContributions = 0
+  let weightedGrowthRate = 0
+  let totalValue = 0
+
+  investments.forEach((inv) => {
+    if (inv.type === 'fund' && inv.monthlyContribution > 0) {
+      const futureValue = calculateFutureValue(inv, year)
+      portfolioValue += futureValue
+      annualContributions += inv.monthlyContribution * 12
+      totalValue += futureValue
+      weightedGrowthRate += futureValue * inv.expectedAnnualROI
+    }
+  })
+
+  const avgROI = totalValue > 0 ? weightedGrowthRate / totalValue : 0
+  const annualGrowth = portfolioValue * (avgROI / 100)
+
+  // Avoid division by zero
+  const impactRatio =
+    annualGrowth > 0
+      ? (annualContributions / annualGrowth) * 100
+      : annualContributions > 0
+        ? 100
+        : 0
+
+  return {
+    year,
+    actualYear: currentYear + year,
+    portfolioValue: Math.round(portfolioValue * 100) / 100,
+    annualGrowth: Math.round(annualGrowth * 100) / 100,
+    annualContributions,
+    impactRatio: Math.round(impactRatio * 100) / 100,
+  }
+}
+
+/**
+ * Calculate future value with optional contribution stop year
+ * After stopYear, monthlyContribution is treated as 0
+ */
+export function calculateFutureValueWithStopYear(
+  investment: Investment,
+  targetYear: number,
+  stopContributionsAtYear: number
+): number {
+  if (investment.type !== 'fund' || investment.monthlyContribution <= 0) {
+    return calculateFutureValue(investment, targetYear)
+  }
+
+  const currentValue = calculateCurrentValue(investment)
+
+  if (targetYear <= stopContributionsAtYear) {
+    // Still contributing - use normal calculation
+    return calculateWithMonthlyContributions(
+      currentValue,
+      investment.expectedAnnualROI,
+      targetYear,
+      investment.monthlyContribution
+    )
+  }
+
+  // Phase 1: Grow with contributions until stop year
+  const valueAtStopYear = calculateWithMonthlyContributions(
+    currentValue,
+    investment.expectedAnnualROI,
+    stopContributionsAtYear,
+    investment.monthlyContribution
+  )
+
+  // Phase 2: Compound without contributions for remaining years
+  const remainingYears = targetYear - stopContributionsAtYear
+  return calculateCompoundInterest(
+    valueAtStopYear,
+    investment.expectedAnnualROI,
+    remainingYears
+  )
+}
+
+/**
+ * Calculate full contribution impact analysis
+ */
+export function calculateContributionImpactSummary(
+  investments: Investment[],
+  loans: Loan[],
+  settings: FIRESettings,
+  maxYears: number = 30
+): ContributionImpactSummary {
+  const totalMonthlyContributions = calculateTotalMonthlyContributions(investments)
+  const threshold = settings.contributionInsignificanceThreshold
+
+  // Generate impact data for each year
+  const impactData: ContributionImpactData[] = []
+  let suggestedStopYear: number | null = null
+
+  for (let year = 0; year <= maxYears; year++) {
+    const data = calculateContributionImpactAtYear(investments, year)
+    impactData.push(data)
+
+    // Find first year where impact drops below threshold
+    if (suggestedStopYear === null && data.impactRatio < threshold && data.impactRatio > 0) {
+      suggestedStopYear = year
+    }
+  }
+
+  const currentImpactRatio = impactData[0]?.impactRatio ?? 0
+  const suggestedStopActualYear =
+    suggestedStopYear !== null ? new Date().getFullYear() + suggestedStopYear : null
+
+  // Calculate FIRE delay if stopping at suggested year
+  let fireDelayYears: number | null = null
+  let portfolioDifference: number | null = null
+
+  if (suggestedStopYear !== null) {
+    // Calculate FIRE year without contributions (from suggested year)
+    // We need to temporarily disable stopContributions to get the "with contributions" baseline
+    const settingsForComparison = { ...settings, stopContributionsEnabled: false }
+    const baselineYearsToFI = calculateFIRESummary(investments, loans, settingsForComparison).yearsToFI
+
+    if (baselineYearsToFI !== null) {
+      // Estimate the delay by comparing portfolio values
+      // When we stop contributions, future portfolio will be smaller
+      const fiYear = baselineYearsToFI
+
+      // Calculate portfolio at FI with continuous contributions
+      let portfolioWithContribs = 0
+      let portfolioWithoutContribs = 0
+
+      investments.forEach((inv) => {
+        portfolioWithContribs += calculateFutureValue(inv, fiYear)
+        portfolioWithoutContribs += calculateFutureValueWithStopYear(inv, fiYear, suggestedStopYear)
+      })
+
+      portfolioDifference = Math.round(portfolioWithoutContribs - portfolioWithContribs)
+
+      // Estimate delay based on the difference in portfolio value
+      // Use a simple approximation: delay = difference / (annual income at FI)
+      const annualIncomeAtFI = portfolioWithContribs * (settings.passiveIncomeRates.fund / 100)
+      if (annualIncomeAtFI > 0) {
+        const valueLost = portfolioWithContribs - portfolioWithoutContribs
+        fireDelayYears = Math.round((valueLost / annualIncomeAtFI) * 10) / 10
+        if (fireDelayYears < 0) fireDelayYears = 0
+      }
+    }
+  }
+
+  return {
+    totalMonthlyContributions,
+    currentImpactRatio,
+    suggestedStopYear,
+    suggestedStopActualYear,
+    fireDelayYears,
+    portfolioDifference,
+    impactData,
   }
 }
