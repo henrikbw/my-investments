@@ -35,6 +35,8 @@ export interface FIRESettings {
   rentalIncomeYearlyIncrease: number
   /** Whether to apply refinancing calculations to eligible loans */
   refinancingEnabled: boolean
+  /** Whether to pay interest only (no principal) on eligible loans */
+  interestOnlyEnabled: boolean
 }
 
 /**
@@ -46,6 +48,7 @@ export const DEFAULT_FIRE_SETTINGS: FIRESettings = {
   interestRateOverride: null,
   rentalIncomeYearlyIncrease: 2, // 2% annual increase in rental income
   refinancingEnabled: false,
+  interestOnlyEnabled: false,
 }
 
 /**

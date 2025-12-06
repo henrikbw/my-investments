@@ -178,15 +178,51 @@ function calculateRefinancedPayment(
 }
 
 /**
+ * Calculate interest-only payment based on remaining balance
+ * Only pays the interest portion, no principal reduction
+ */
+function calculateInterestOnlyPayment(
+  loan: Loan,
+  monthsFromNow: number,
+  interestRateOverride?: number | null
+): { total: number; interest: number; principal: number } {
+  const effectiveRate = interestRateOverride ?? loan.interestRate
+  const remainingBalance = getLoanBalanceAtMonth(loan, monthsFromNow, interestRateOverride)
+
+  // If loan is paid off, return 0
+  if (remainingBalance <= 0) {
+    return { total: 0, interest: 0, principal: 0 }
+  }
+
+  // Calculate interest only (no principal)
+  const monthlyRate = effectiveRate / 100 / 12
+  const interest = remainingBalance * monthlyRate
+
+  return {
+    total: interest,
+    interest,
+    principal: 0,
+  }
+}
+
+/**
  * Calculate loan payment at a specific month from now
  * If refinancing is enabled and loan is marked as refinanceable, use refinanced calculation
+ * If interest-only is enabled and loan is marked as refinanceable, only pay interest
  */
 export function calculateLoanPaymentAtMonth(
   loan: Loan,
   monthsFromNow: number,
   interestRateOverride?: number | null,
-  useRefinancing: boolean = false
+  useRefinancing: boolean = false,
+  useInterestOnly: boolean = false
 ): { total: number; interest: number; principal: number } {
+  // If interest-only is enabled and loan can be refinanced, use interest-only calculation
+  // Interest-only takes precedence over refinancing
+  if (useInterestOnly && loan.canBeRefinanced) {
+    return calculateInterestOnlyPayment(loan, monthsFromNow, interestRateOverride)
+  }
+
   // If refinancing is enabled and loan can be refinanced, use refinanced calculation
   if (useRefinancing && loan.canBeRefinanced) {
     return calculateRefinancedPayment(loan, monthsFromNow, interestRateOverride)
@@ -234,7 +270,8 @@ function calculateTotalLoanExpenses(
   loans: Loan[],
   monthsFromNow: number = 0,
   interestRateOverride?: number | null,
-  useRefinancing: boolean = false
+  useRefinancing: boolean = false,
+  useInterestOnly: boolean = false
 ): { total: number; interest: number; principal: number } {
   return loans.reduce(
     (acc, loan) => {
@@ -242,7 +279,8 @@ function calculateTotalLoanExpenses(
         loan,
         monthsFromNow,
         interestRateOverride,
-        useRefinancing
+        useRefinancing,
+        useInterestOnly
       )
       return {
         total: acc.total + payment.total,
@@ -349,6 +387,7 @@ export function prepareFIREChartData(
   const data: FIREChartDataPoint[] = []
   const requiredExpenses = settings.monthlyRequiredExpenses
   const useRefinancing = settings.refinancingEnabled
+  const useInterestOnly = settings.interestOnlyEnabled
 
   for (let year = 0; year <= maxYears; year++) {
     const monthsFromNow = year * 12
@@ -357,7 +396,8 @@ export function prepareFIREChartData(
       loans,
       monthsFromNow,
       settings.interestRateOverride,
-      useRefinancing
+      useRefinancing,
+      useInterestOnly
     )
     const netWorth = calculateNetWorth(investments, loans, year)
     const totalExpenses = loanExpenses.total + requiredExpenses
@@ -392,12 +432,14 @@ export function calculateFIRESummary(
   settings: FIRESettings = DEFAULT_FIRE_SETTINGS
 ): FIRESummary {
   const useRefinancing = settings.refinancingEnabled
+  const useInterestOnly = settings.interestOnlyEnabled
   const currentIncome = calculateTotalMonthlyIncomeAtYear(investments, 0, settings)
   const loanExpenses = calculateTotalLoanExpenses(
     loans,
     0,
     settings.interestRateOverride,
-    useRefinancing
+    useRefinancing,
+    useInterestOnly
   )
   const currentNetWorth = calculateNetWorth(investments, loans, 0)
   const requiredExpenses = settings.monthlyRequiredExpenses
@@ -427,7 +469,8 @@ export function calculateFIRESummary(
         loans,
         monthsFromNow,
         settings.interestRateOverride,
-        useRefinancing
+        useRefinancing,
+        useInterestOnly
       )
       const projectedTotalExpenses = projectedLoanExpenses.total + requiredExpenses
 
