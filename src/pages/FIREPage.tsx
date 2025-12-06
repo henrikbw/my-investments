@@ -519,6 +519,18 @@ export function FIREPage() {
               Refinancing
             </Label>
           </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="interestOnly"
+              checked={settings.interestOnlyEnabled}
+              onCheckedChange={(checked: boolean) =>
+                updateSettings({ interestOnlyEnabled: checked })
+              }
+            />
+            <Label htmlFor="interestOnly" className="text-sm cursor-pointer">
+              Interest Only
+            </Label>
+          </div>
           <FIRESettingsDialog
             settings={settings}
             onUpdate={updateSettings}

@@ -178,16 +178,63 @@ function calculateRefinancedPayment(
 }
 
 /**
- * Calculate loan payment at a specific month from now
- * If refinancing is enabled and loan is marked as refinanceable, use refinanced calculation
+ * Calculate interest-only payment based on remaining balance
+ * Only pays the interest portion, no principal reduction
+ *
+ * @param useRefinancing - If true, balance decreases per original schedule before interest-only kicks in.
+ *                         If false, balance stays constant at current level (true interest-only from now).
  */
-export function calculateLoanPaymentAtMonth(
+function calculateInterestOnlyPayment(
   loan: Loan,
   monthsFromNow: number,
   interestRateOverride?: number | null,
   useRefinancing: boolean = false
 ): { total: number; interest: number; principal: number } {
-  // If refinancing is enabled and loan can be refinanced, use refinanced calculation
+  const effectiveRate = interestRateOverride ?? loan.interestRate
+
+  // If refinancing is also enabled, use the projected balance at that point in time
+  // If refinancing is off, the balance stays constant at today's level (no principal paid)
+  const remainingBalance = useRefinancing
+    ? getLoanBalanceAtMonth(loan, monthsFromNow, interestRateOverride)
+    : getLoanBalanceAtMonth(loan, 0, interestRateOverride) // Current balance, stays constant
+
+  // If loan is paid off, return 0
+  if (remainingBalance <= 0) {
+    return { total: 0, interest: 0, principal: 0 }
+  }
+
+  // Calculate interest only (no principal)
+  const monthlyRate = effectiveRate / 100 / 12
+  const interest = remainingBalance * monthlyRate
+
+  return {
+    total: interest,
+    interest,
+    principal: 0,
+  }
+}
+
+/**
+ * Calculate loan payment at a specific month from now
+ * Supports combinations of refinancing and interest-only modes:
+ * - Neither: Use original amortization schedule
+ * - Refinancing only: Recalculate payment with 30-year term on remaining balance
+ * - Interest-only only: Pay only interest on current balance (balance stays constant)
+ * - Both: Pay only interest, but balance follows original amortization (then interest-only)
+ */
+export function calculateLoanPaymentAtMonth(
+  loan: Loan,
+  monthsFromNow: number,
+  interestRateOverride?: number | null,
+  useRefinancing: boolean = false,
+  useInterestOnly: boolean = false
+): { total: number; interest: number; principal: number } {
+  // If interest-only is enabled and loan can be refinanced, use interest-only calculation
+  if (useInterestOnly && loan.canBeRefinanced) {
+    return calculateInterestOnlyPayment(loan, monthsFromNow, interestRateOverride, useRefinancing)
+  }
+
+  // If only refinancing is enabled and loan can be refinanced, use refinanced calculation
   if (useRefinancing && loan.canBeRefinanced) {
     return calculateRefinancedPayment(loan, monthsFromNow, interestRateOverride)
   }
@@ -234,7 +281,8 @@ function calculateTotalLoanExpenses(
   loans: Loan[],
   monthsFromNow: number = 0,
   interestRateOverride?: number | null,
-  useRefinancing: boolean = false
+  useRefinancing: boolean = false,
+  useInterestOnly: boolean = false
 ): { total: number; interest: number; principal: number } {
   return loans.reduce(
     (acc, loan) => {
@@ -242,7 +290,8 @@ function calculateTotalLoanExpenses(
         loan,
         monthsFromNow,
         interestRateOverride,
-        useRefinancing
+        useRefinancing,
+        useInterestOnly
       )
       return {
         total: acc.total + payment.total,
@@ -349,6 +398,7 @@ export function prepareFIREChartData(
   const data: FIREChartDataPoint[] = []
   const requiredExpenses = settings.monthlyRequiredExpenses
   const useRefinancing = settings.refinancingEnabled
+  const useInterestOnly = settings.interestOnlyEnabled
 
   for (let year = 0; year <= maxYears; year++) {
     const monthsFromNow = year * 12
@@ -357,7 +407,8 @@ export function prepareFIREChartData(
       loans,
       monthsFromNow,
       settings.interestRateOverride,
-      useRefinancing
+      useRefinancing,
+      useInterestOnly
     )
     const netWorth = calculateNetWorth(investments, loans, year)
     const totalExpenses = loanExpenses.total + requiredExpenses
@@ -392,12 +443,14 @@ export function calculateFIRESummary(
   settings: FIRESettings = DEFAULT_FIRE_SETTINGS
 ): FIRESummary {
   const useRefinancing = settings.refinancingEnabled
+  const useInterestOnly = settings.interestOnlyEnabled
   const currentIncome = calculateTotalMonthlyIncomeAtYear(investments, 0, settings)
   const loanExpenses = calculateTotalLoanExpenses(
     loans,
     0,
     settings.interestRateOverride,
-    useRefinancing
+    useRefinancing,
+    useInterestOnly
   )
   const currentNetWorth = calculateNetWorth(investments, loans, 0)
   const requiredExpenses = settings.monthlyRequiredExpenses
@@ -427,7 +480,8 @@ export function calculateFIRESummary(
         loans,
         monthsFromNow,
         settings.interestRateOverride,
-        useRefinancing
+        useRefinancing,
+        useInterestOnly
       )
       const projectedTotalExpenses = projectedLoanExpenses.total + requiredExpenses
 
