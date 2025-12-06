@@ -180,14 +180,23 @@ function calculateRefinancedPayment(
 /**
  * Calculate interest-only payment based on remaining balance
  * Only pays the interest portion, no principal reduction
+ *
+ * @param useRefinancing - If true, balance decreases per original schedule before interest-only kicks in.
+ *                         If false, balance stays constant at current level (true interest-only from now).
  */
 function calculateInterestOnlyPayment(
   loan: Loan,
   monthsFromNow: number,
-  interestRateOverride?: number | null
+  interestRateOverride?: number | null,
+  useRefinancing: boolean = false
 ): { total: number; interest: number; principal: number } {
   const effectiveRate = interestRateOverride ?? loan.interestRate
-  const remainingBalance = getLoanBalanceAtMonth(loan, monthsFromNow, interestRateOverride)
+
+  // If refinancing is also enabled, use the projected balance at that point in time
+  // If refinancing is off, the balance stays constant at today's level (no principal paid)
+  const remainingBalance = useRefinancing
+    ? getLoanBalanceAtMonth(loan, monthsFromNow, interestRateOverride)
+    : getLoanBalanceAtMonth(loan, 0, interestRateOverride) // Current balance, stays constant
 
   // If loan is paid off, return 0
   if (remainingBalance <= 0) {
@@ -210,8 +219,8 @@ function calculateInterestOnlyPayment(
  * Supports combinations of refinancing and interest-only modes:
  * - Neither: Use original amortization schedule
  * - Refinancing only: Recalculate payment with 30-year term on remaining balance
- * - Interest-only only: Pay only interest on remaining balance (no principal)
- * - Both: Pay only interest on remaining balance (interest-only takes effect)
+ * - Interest-only only: Pay only interest on current balance (balance stays constant)
+ * - Both: Pay only interest, but balance follows original amortization (then interest-only)
  */
 export function calculateLoanPaymentAtMonth(
   loan: Loan,
@@ -221,9 +230,8 @@ export function calculateLoanPaymentAtMonth(
   useInterestOnly: boolean = false
 ): { total: number; interest: number; principal: number } {
   // If interest-only is enabled and loan can be refinanced, use interest-only calculation
-  // This applies whether refinancing is also enabled or not (interest-only on remaining balance)
   if (useInterestOnly && loan.canBeRefinanced) {
-    return calculateInterestOnlyPayment(loan, monthsFromNow, interestRateOverride)
+    return calculateInterestOnlyPayment(loan, monthsFromNow, interestRateOverride, useRefinancing)
   }
 
   // If only refinancing is enabled and loan can be refinanced, use refinanced calculation
