@@ -30,13 +30,6 @@ import {
   Legend,
   ReferenceLine,
 } from 'recharts'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { formatCurrency } from '@/utils/format'
 import { FIREChartDataPoint, FIRESettings, DEFAULT_FIRE_SETTINGS, ContributionImpactSummary } from '@/types'
 import { MODULE_COLORS, MODULE_LABELS } from '@/constants/defaults'
@@ -332,20 +325,24 @@ function ContributionImpactCard({
             <Label htmlFor="threshold" className="text-sm font-normal">
               Threshold:
             </Label>
-            <Select
-              value={threshold.toString()}
-              onValueChange={(v) => onThresholdChange(parseFloat(v))}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0.5">0.5%</SelectItem>
-                <SelectItem value="1">1%</SelectItem>
-                <SelectItem value="2">2%</SelectItem>
-                <SelectItem value="5">5%</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-1">
+              <Input
+                id="threshold"
+                type="number"
+                min="0.1"
+                max="100"
+                step="0.1"
+                className="w-16 h-8 text-sm"
+                value={threshold}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value)
+                  if (!isNaN(value) && value > 0 && value <= 100) {
+                    onThresholdChange(value)
+                  }
+                }}
+              />
+              <span className="text-sm text-muted-foreground">%</span>
+            </div>
           </div>
         </CardTitle>
       </CardHeader>
